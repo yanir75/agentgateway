@@ -1,15 +1,13 @@
-use std::collections::HashSet;
 use std::hash::Hash;
 
 use ::cel::Value;
-use rust_decimal::Decimal;
 use secrecy::{ExposeSecret, SecretString};
 use serde::{Deserialize, Deserializer, Serializer};
 use subtle::ConstantTimeEq;
 
 use crate::http::Request;
 use crate::http::auth::AuthorizationLocation;
-use crate::http::budget::{Budget, BudgetLimitUnit, MatchedBudgets, NANODOLLARS_PER_USD};
+use crate::http::budget::{Budgets, MatchedBudgets};
 use crate::proxy::dtrace::{self, pol_result};
 use crate::proxy::{ProxyError, ProxyResponse};
 use crate::{apply, *};
@@ -449,6 +447,9 @@ pub struct LocalAPIKeys {
 	/// Where to read the API key from in incoming requests.
 	#[serde(default)]
 	pub location: AuthorizationLocation,
+
+	/// Budgets that apply to keys based on metadata fields. These budgets are independent of any budgets attached to individual keys.
+	pub budgets: Option<Budgets>,
 }
 
 #[apply(schema_de!)]
@@ -463,10 +464,6 @@ pub enum LocalAPIKey {
 		/// Omitted means no additional constraint; an empty list denies all models.
 		#[serde(rename = "allowedModels", default)]
 		allowed_models: Option<Vec<String>>,
-		/// Independent budgets charged after LLM responses. A request is not charged when its provider
-		/// does not report the usage or cost required by the budget unit.
-		#[serde(default)]
-		budgets: Vec<Budget>,
 	},
 	Sha256 {
 		/// SHA-256 hash of an API key value to accept, in `sha256:<hex>` format.
@@ -478,28 +475,22 @@ pub enum LocalAPIKey {
 		/// Omitted means no additional constraint; an empty list denies all models.
 		#[serde(rename = "allowedModels", default)]
 		allowed_models: Option<Vec<String>>,
-		/// Independent budgets charged after LLM responses. A request is not charged when its provider
-		/// does not report the usage or cost required by the budget unit.
-		#[serde(default)]
-		budgets: Vec<Budget>,
 	},
 }
 
 impl LocalAPIKey {
-	fn into_parts(self) -> anyhow::Result<(APIKeyHash, APIKeyPolicy)> {
-		let (key_hash, metadata, allowed_models, budgets) = match self {
+	fn into_parts(self,budgets: &Budgets) -> anyhow::Result<(APIKeyHash, APIKeyPolicy)> {
+		let (key_hash, metadata, allowed_models) = match self {
 			LocalAPIKey::Key {
 				key,
 				metadata,
 				allowed_models,
-				budgets,
-			} => (key.sha256(), metadata, allowed_models, budgets),
+			} => (key.sha256(), metadata, allowed_models),
 			LocalAPIKey::Sha256 {
 				key_hash,
 				metadata,
 				allowed_models,
-				budgets,
-			} => (key_hash, metadata, allowed_models, budgets),
+			} => (key_hash, metadata, allowed_models),
 		};
 		let metadata = metadata.unwrap_or_default();
 		let api_key = metadata
@@ -507,60 +498,19 @@ impl LocalAPIKey {
 			.and_then(serde_json::Value::as_str)
 			.filter(|name| !name.is_empty())
 			.map(str::to_owned);
-		if !budgets.is_empty() && api_key.is_none() {
+		
+		let matched_budgets = budgets.resolve_budgets(key_hash.as_str(), &metadata);
+		if !matched_budgets.budgets.is_empty() && api_key.is_none() {
 			anyhow::bail!("API keys with budgets must have a metadata.name");
 		}
-		let mut budget_names = HashSet::new();
-		for budget in &budgets {
-			anyhow::ensure!(!budget.name.is_empty(), "budget names must not be empty");
-			anyhow::ensure!(
-				budget_names.insert(&budget.name),
-				"duplicate budget name {:?} on API key {:?}",
-				budget.name,
-				api_key.as_deref().unwrap_or_default(),
-			);
-			let window_ms = budget.window.rolling.as_millis();
-			anyhow::ensure!(
-				window_ms > 0,
-				"budget rolling windows must be greater than zero"
-			);
-			anyhow::ensure!(
-				window_ms <= i64::MAX as u128,
-				"budget rolling window is too large"
-			);
-			let amount = budget.limit.amount.decimal().normalize();
-			let multiplier = match budget.limit.unit {
-				BudgetLimitUnit::Usd => {
-					anyhow::ensure!(
-						amount.scale() <= 9,
-						"USD budget limits support at most 9 fractional digits"
-					);
-					NANODOLLARS_PER_USD
-				},
-				BudgetLimitUnit::Tokens => {
-					anyhow::ensure!(
-						amount.fract().is_zero(),
-						"token budget limits must be whole numbers"
-					);
-					1
-				},
-			};
-			anyhow::ensure!(
-				amount * Decimal::from(multiplier) <= Decimal::from(i64::MAX),
-				"budget limit exceeds database integer range"
-			);
-		}
-		let budgets = (!budgets.is_empty()).then(|| MatchedBudgets {
-			api_key: api_key.expect("budget API keys have a name"),
-			api_key_id: key_hash.as_str().to_owned(),
-			budgets,
-		});
+		
+
 		Ok((
 			key_hash,
 			APIKeyPolicy {
 				metadata,
 				allowed_models: AllowedModels::compile(allowed_models)?,
-				budgets,
+				budgets: Some(matched_budgets),
 			},
 		))
 	}
@@ -568,12 +518,15 @@ impl LocalAPIKey {
 
 impl LocalAPIKeys {
 	pub fn compile(self) -> anyhow::Result<APIKeyAuthentication> {
+		let budgets = self.budgets.unwrap_or_default();
+		budgets.validate()?;
+
 		Ok(APIKeyAuthentication {
 			users: Arc::new(
 				self
 					.keys
 					.into_iter()
-					.map(LocalAPIKey::into_parts)
+					.map(|key| LocalAPIKey::into_parts(key, &budgets))
 					.collect::<anyhow::Result<_>>()?,
 			),
 			mode: self.mode,

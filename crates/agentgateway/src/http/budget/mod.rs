@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap,BTreeSet};
 use std::str::FromStr;
 use std::sync::{Arc, OnceLock};
 use std::time::Duration;
@@ -7,6 +7,7 @@ use anyhow::Context;
 use chrono::{DurationRound, TimeDelta, Utc};
 use dashmap::DashMap;
 use dashmap::mapref::entry::Entry;
+use itertools::Itertools;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
@@ -120,6 +121,28 @@ struct BudgetDefinition {
 	budget: Budget,
 }
 
+#[apply(schema_de!)]
+pub enum BudgetScope {
+	Key(String),
+	GroupBy(BTreeSet<String>),
+	Selector(HashMap<String, String>),
+}
+
+#[derive(Debug, Clone)]
+pub enum ResolvedBudgetScope {
+	Key {
+		id: String,
+		api_key_id: String,
+	},
+	GroupBy{
+		id: String,
+		values: BTreeMap<String, String>,
+	},
+	Selector {
+		id: String,
+	},
+}
+
 /// A named budget attached to a standalone API key.
 ///
 /// Usage is charged after an LLM response when the provider reports the tokens or cost required by
@@ -135,6 +158,123 @@ pub struct Budget {
 	pub window: BudgetWindow,
 	/// Action taken when the budget is exceeded.
 	pub on_budget_exceeded: BudgetExceededAction,
+	/// Optional scope for this budget.
+	pub scope: BudgetScope,
+}
+
+impl Budget {
+	pub fn validate(&self) -> anyhow::Result<()> {
+		anyhow::ensure!(
+			!self.name.is_empty(),
+			"budget names must not be empty"
+		);
+		let window_ms = self.window.rolling.as_millis();
+		anyhow::ensure!(
+			window_ms > 0,
+			"budget rolling windows must be greater than zero"
+		);
+		anyhow::ensure!(
+			window_ms <= i64::MAX as u128,
+			"budget rolling window is too large"
+		);
+		let amount = self.limit.amount.decimal().normalize();
+		let multiplier = match self.limit.unit {
+			BudgetLimitUnit::Usd => {
+				anyhow::ensure!(
+					amount.scale() <= 9,
+					"USD budget limits support at most 9 fractional digits"
+				);
+				NANODOLLARS_PER_USD
+			},
+			BudgetLimitUnit::Tokens => {
+				anyhow::ensure!(
+					amount.fract().is_zero(),
+					"token budget limits must be whole numbers"
+				);
+				1
+			},
+		};
+		anyhow::ensure!(
+			amount * Decimal::from(multiplier) <= Decimal::from(i64::MAX),
+			"budget limit exceeds database integer range"
+		);
+		Ok(())
+	}
+
+	pub fn resolve_scope(&self, api_key_id: &str, metadata: &serde_json::Value) -> Option<ResolvedBudgetScope> {
+		match &self.scope {
+			BudgetScope::Key(id) => {
+				if id == api_key_id {
+					Some(ResolvedBudgetScope::Key {
+						id: format!("api-key:{}:budget:{}", id, self.name),
+						api_key_id: id.to_owned(),
+					})
+				} else {
+					None
+				}
+			},
+			BudgetScope::GroupBy(fields) => {
+				let mut values = BTreeMap::new();
+				for field in fields {
+					let value = metadata.get(field)?.as_str()?.to_owned();
+					values.insert(field.to_owned(), value);
+				}
+				Some(ResolvedBudgetScope::GroupBy {
+					id: format!("{}={}", values.keys().map(String::as_str).join("."), values.values().map(String::as_str).join(".")),
+					values: values
+				})
+			},
+			BudgetScope::Selector(selector) => {
+				for (key, value) in selector {
+					if metadata.get(key)?.as_str()? != value {
+						return None;
+					}
+				}
+				Some(ResolvedBudgetScope::Selector {
+					id: self.name.to_owned(),
+				})
+			},
+		}
+	}
+
+
+	pub fn resolve_budget(&self, api_key: &str, metadata: &serde_json::Value) -> Option<MatchedBudget> {
+		let resolved_scope = self.resolve_scope(api_key, &metadata)?;
+		Some(MatchedBudget {
+			scope: resolved_scope,
+			budget: self.clone(),
+		})
+		
+	}
+	
+}
+
+
+#[apply(schema_de!)]
+#[derive(Default)]
+pub struct Budgets(Vec<Budget>);
+
+
+impl Budgets {
+	pub fn validate(&self) -> anyhow::Result<()> {
+		let mut names = std::collections::HashSet::new();
+		for budget in self.0.iter() {
+			anyhow::ensure!(
+				names.insert(&budget.name),
+				"duplicate budget name {:?}",
+				budget.name,
+			);
+			budget.validate()?;
+		}
+		Ok(())
+	}
+
+	pub fn resolve_budgets(&self, api_key: &str, metadata: &serde_json::Value) -> MatchedBudgets {
+		let matched_budgets = self.0.iter()
+			.filter_map(|budget| budget.resolve_budget(api_key, metadata))
+			.collect();
+		MatchedBudgets { budgets: matched_budgets }
+	}
 }
 
 #[apply(schema_de!)]
@@ -252,10 +392,23 @@ impl BudgetExceededAction {
 }
 
 #[derive(Debug, Clone)]
-pub struct MatchedBudgets {
-	pub(crate) api_key: String,
-	pub(crate) api_key_id: String,
-	pub(crate) budgets: Vec<Budget>,
+pub struct MatchedBudget {
+	scope: ResolvedBudgetScope,
+	budget: Budget,
+}
+
+impl MatchedBudget {
+	fn id(&self) -> String {
+		match &self.scope {
+			ResolvedBudgetScope::Key { id, .. } => id.clone(),
+			ResolvedBudgetScope::GroupBy { id, .. } => id.clone(),
+			ResolvedBudgetScope::Selector { id } => id.clone(),
+		}
+	}
+}
+#[derive(Debug, Clone)]
+pub struct MatchedBudgets{
+	pub(crate) budgets: Vec<MatchedBudget>
 }
 
 #[derive(Debug, Clone, Default, serde::Serialize)]
@@ -292,15 +445,7 @@ pub struct BudgetExceeded {
 	pub retry_after: u64,
 }
 
-fn budget_id(api_key_id: &str, budget: &Budget) -> String {
-	format!(
-		"api-key:{}:{}:{}:{}",
-		api_key_id.len(),
-		api_key_id,
-		budget.name.len(),
-		budget.name
-	)
-}
+
 
 /// Returns the half-open fixed window `[start, end)` containing `now`.
 ///
@@ -392,11 +537,10 @@ impl BudgetPolicy {
 				continue;
 			};
 			for budget in &budgets.budgets {
-				let budget_id = budget_id(&budgets.api_key_id, budget);
 				if let Some(registration) = &self.registration {
 					BudgetCounter::configured(&budgets.api_key, budget, now)?;
 					registration.insert(
-						budget_id,
+						budget.id(),
 						BudgetDefinition {
 							api_key: budgets.api_key.clone(),
 							budget: budget.clone(),
@@ -404,7 +548,7 @@ impl BudgetPolicy {
 					);
 					continue;
 				}
-				match self.counters.entry(budget_id) {
+				match self.counters.entry(budget.id()) {
 					Entry::Occupied(mut entry) => {
 						entry.get_mut().configure(&budgets.api_key, budget, now)?;
 					},
