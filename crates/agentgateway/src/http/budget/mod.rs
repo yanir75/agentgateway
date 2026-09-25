@@ -738,17 +738,20 @@ mod tests {
 
 	#[test]
 	fn budgets_require_a_database() {
+				let id = hex::encode(crate::crypto::digest::sha256("sk-budget".as_bytes()));
+
 		let keys: crate::http::apikey::LocalAPIKeys = serde_json::from_value(serde_json::json!({
 			"keys": [{
 				"key": "sk-budget",
 				"metadata": {"name": "budgeted-key"},
-				"budgets": [{
+			}],
+							"budgets": [{
 					"name": "tokens",
 					"limit": {"unit": "Tokens", "amount": 40},
 					"window": {"rolling": "1h"},
-					"onBudgetExceeded": "Block"
+					"onBudgetExceeded": "Block",
+					"scope": {"key": id}
 				}]
-			}]
 		}))
 		.unwrap();
 		let authentication = keys.compile().unwrap();
@@ -763,17 +766,18 @@ mod tests {
 
 	#[test]
 	fn registration_replaces_definitions_only_when_applied() {
+		let id = hex::encode(crate::crypto::digest::sha256("sk-budget".as_bytes()));
 		let current: crate::http::apikey::LocalAPIKeys = serde_json::from_value(serde_json::json!({
 			"keys": [{
 				"key": "sk-budget",
-				"metadata": {"name": "budgeted-key","agentgateway.dev/id":"sk-budget"},
+				"metadata": {"name": "budgeted-key","agentgateway.dev/id":id},
 			}],
 			"budgets": [{
 					"name": "old",
 					"limit": {"unit": "Tokens", "amount": 40},
 					"window": {"rolling": "1h"},
 					"onBudgetExceeded": "Block",
-					"scope": {"key":"sk-budget"}
+					"scope": {"key":id}
 				}]
 		}))
 		.unwrap();
@@ -781,14 +785,14 @@ mod tests {
 			serde_json::from_value(serde_json::json!({
 				"keys": [{
 					"key": "sk-budget",
-					"metadata": {"name": "budgeted-key","agentgateway.dev/id":"sk-budget"},
+					"metadata": {"name": "budgeted-key","agentgateway.dev/id":id},
 				}],
 				"budgets": [{
 						"name": "new",
 						"limit": {"unit": "Tokens", "amount": 80},
 						"window": {"rolling": "1h"},
 						"onBudgetExceeded": "Audit",
-						"scope": {"key":"sk-budget"}
+						"scope": {"key":id}
 					}]
 			}))
 			.unwrap();
@@ -799,7 +803,7 @@ mod tests {
 		candidate
 			.register(&replacement.compile().unwrap(), true)
 			.unwrap();
-		assert_eq!(policy.status(Some(&"sk-budget".to_owned())).unwrap().budgets[0].name, "old");
+		assert_eq!(policy.status(None).unwrap().budgets[0].name, "old");
 
 		policy.apply_registration(candidate.registration()).unwrap();
 		let status = policy.status(None).unwrap();

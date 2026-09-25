@@ -449,7 +449,7 @@ pub struct LocalAPIKeys {
 	pub location: AuthorizationLocation,
 
 	/// Budgets that apply to keys based on metadata fields. These budgets are independent of any budgets attached to individual keys.
-    #[serde(skip_serializing_if = "Option::is_none")]
+	#[serde(skip_serializing_if = "Option::is_none")]
 	pub budgets: Option<Budgets>,
 }
 
@@ -500,7 +500,7 @@ impl LocalAPIKey {
 		// 	.filter(|name| !name.is_empty())
 		// 	.map(str::to_owned);
 
-		let matched_budgets = budgets.resolve(key_hash.as_str(), &metadata);
+		let matched_budgets = Some(budgets.resolve(key_hash.as_str(), &metadata)).filter(|b|!b.budgets.is_empty());
 		// if !matched_budgets.budgets.is_empty() && api_key.is_none() {
 		// 	anyhow::bail!("API keys with budgets must have a metadata.name");
 		// }
@@ -510,7 +510,7 @@ impl LocalAPIKey {
 			APIKeyPolicy {
 				metadata,
 				allowed_models: AllowedModels::compile(allowed_models)?,
-				budgets: Some(matched_budgets),
+				budgets: matched_budgets,
 			},
 		))
 	}

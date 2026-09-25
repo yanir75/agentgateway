@@ -16,7 +16,8 @@ pub struct BudgetStatusResponse {
 #[serde(rename_all = "camelCase")]
 pub struct BudgetStatus {
 	pub id: String,
-	pub api_key_id: String,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub api_key_id: Option<String>,
 	pub name: String,
 	pub limit: BudgetStatusLimit,
 	pub usage: BudgetStatusUsage,
@@ -59,25 +60,13 @@ impl BudgetPolicy {
 			.iter()
 			.filter_map(|counter| {
 				let definition = counter.definition.as_ref()?;
-				let key_id = match api_key_id {
-					Some(val) => val,
-					None => return None,
+				let scope_key = match &definition.scope {
+					ResolvedBudgetScope::Key { api_key_id } => Some(api_key_id.as_str()),
+					_ => None,
 				};
-				if match &definition.scope {
-					ResolvedBudgetScope::Key { api_key_id: id } => id != key_id,
-					_ => false,
-				} {
+				if api_key_id.is_some_and(|filter| scope_key.is_some_and(|key| key != filter)) {
 					return None;
 				}
-				// if api_key_id.is_none_or(|key_id| match &definition.scope {
-				// 	ResolvedBudgetScope::Key { api_key_id } => api_key_id != key_id,
-				// 	_ => false,
-				// }) {
-				// 	return None;
-				// }
-				// if !api_key_id.is_none_or(|name| definition.api_key == name) {
-				// 	return None;
-				// }
 				let limit = definition.budget.limit.amount.decimal();
 				let expired = observed_at >= counter.window_end;
 				let used = if expired {
@@ -88,7 +77,7 @@ impl BudgetPolicy {
 				let remaining = (limit - used).max(Decimal::ZERO);
 				Some(BudgetStatus {
 					id: definition.id.clone(),
-					api_key_id: key_id.to_owned(),
+					api_key_id: scope_key.map(str::to_owned),
 					name: definition.budget.name.clone(),
 					limit: BudgetStatusLimit {
 						unit: definition.budget.limit.unit.as_str().to_owned(),
