@@ -6739,7 +6739,7 @@
           }
         },
         "budgets": {
-          "description": "Budgets that apply to keys based on metadata fields. These budgets are independent of any budgets attached to individual keys.",
+          "description": "Budgets that apply to keys based on metadata fields. These budgets replace budgets attached to individual keys.",
           "anyOf": [
             {
               "$ref": "#/$defs/Budgets"
@@ -6866,7 +6866,7 @@
           "$ref": "#/$defs/BudgetExceededAction"
         },
         "scope": {
-          "description": "Optional scope for this budget.",
+          "description": "Scope for this budget.",
           "$ref": "#/$defs/BudgetScope"
         }
       },

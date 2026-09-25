@@ -4464,7 +4464,7 @@
 |`binds[].listeners[].routes[].policies.apiKey.location.cookie`|object|Read the credential from a request cookie.|
 |`binds[].listeners[].routes[].policies.apiKey.location.cookie.name`|string|Cookie name containing the credential.|
 |`binds[].listeners[].routes[].policies.apiKey.location.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
-|`binds[].listeners[].routes[].policies.apiKey.budgets`|[]object|Budgets that apply to keys based on metadata fields. These budgets are independent of any budgets attached to individual keys.|
+|`binds[].listeners[].routes[].policies.apiKey.budgets`|[]object|Budgets that apply to keys based on metadata fields. These budgets replace budgets attached to individual keys.|
 |`binds[].listeners[].routes[].policies.apiKey.budgets[].name`|string|Stable name for this budget within its owning API key.|
 |`binds[].listeners[].routes[].policies.apiKey.budgets[].limit`|object|Maximum usage allowed during the window.|
 |`binds[].listeners[].routes[].policies.apiKey.budgets[].limit.unit`|enum|Possible values: `USD`, `Tokens`.|
@@ -4472,7 +4472,7 @@
 |`binds[].listeners[].routes[].policies.apiKey.budgets[].window`|object|Rolling window over which usage will be accumulated.|
 |`binds[].listeners[].routes[].policies.apiKey.budgets[].window.rolling`|string|Duration of the fixed usage window, for example `1h`, `24h`, or `30d`.<br>Windows are aligned to the Unix epoch rather than starting with the first request: `1h`<br>follows UTC clock hours, `24h` starts at midnight UTC, and `30d` uses consecutive 30-day<br>periods rather than calendar months.|
 |`binds[].listeners[].routes[].policies.apiKey.budgets[].onBudgetExceeded`|enum|Action taken when the budget is exceeded.<br>Possible values: `Audit`, `Block`.|
-|`binds[].listeners[].routes[].policies.apiKey.budgets[].scope`|object|Optional scope for this budget.<br>Exactly one of key, groupBy, or selector may be set.|
+|`binds[].listeners[].routes[].policies.apiKey.budgets[].scope`|object|Scope for this budget.<br>Exactly one of key, groupBy, or selector may be set.|
 |`binds[].listeners[].routes[].policies.apiKey.budgets[].scope.key`|string||
 |`binds[].listeners[].routes[].policies.apiKey.budgets[].scope.groupBy`|[]string||
 |`binds[].listeners[].routes[].policies.apiKey.budgets[].scope.selector`|object||
@@ -20376,7 +20376,7 @@
 |`binds[].listeners[].policies.apiKey.location.cookie`|object|Read the credential from a request cookie.|
 |`binds[].listeners[].policies.apiKey.location.cookie.name`|string|Cookie name containing the credential.|
 |`binds[].listeners[].policies.apiKey.location.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
-|`binds[].listeners[].policies.apiKey.budgets`|[]object|Budgets that apply to keys based on metadata fields. These budgets are independent of any budgets attached to individual keys.|
+|`binds[].listeners[].policies.apiKey.budgets`|[]object|Budgets that apply to keys based on metadata fields. These budgets replace budgets attached to individual keys.|
 |`binds[].listeners[].policies.apiKey.budgets[].name`|string|Stable name for this budget within its owning API key.|
 |`binds[].listeners[].policies.apiKey.budgets[].limit`|object|Maximum usage allowed during the window.|
 |`binds[].listeners[].policies.apiKey.budgets[].limit.unit`|enum|Possible values: `USD`, `Tokens`.|
@@ -20384,7 +20384,7 @@
 |`binds[].listeners[].policies.apiKey.budgets[].window`|object|Rolling window over which usage will be accumulated.|
 |`binds[].listeners[].policies.apiKey.budgets[].window.rolling`|string|Duration of the fixed usage window, for example `1h`, `24h`, or `30d`.<br>Windows are aligned to the Unix epoch rather than starting with the first request: `1h`<br>follows UTC clock hours, `24h` starts at midnight UTC, and `30d` uses consecutive 30-day<br>periods rather than calendar months.|
 |`binds[].listeners[].policies.apiKey.budgets[].onBudgetExceeded`|enum|Action taken when the budget is exceeded.<br>Possible values: `Audit`, `Block`.|
-|`binds[].listeners[].policies.apiKey.budgets[].scope`|object|Optional scope for this budget.<br>Exactly one of key, groupBy, or selector may be set.|
+|`binds[].listeners[].policies.apiKey.budgets[].scope`|object|Scope for this budget.<br>Exactly one of key, groupBy, or selector may be set.|
 |`binds[].listeners[].policies.apiKey.budgets[].scope.key`|string||
 |`binds[].listeners[].policies.apiKey.budgets[].scope.groupBy`|[]string||
 |`binds[].listeners[].policies.apiKey.budgets[].scope.selector`|object||
@@ -26228,7 +26228,7 @@
 |`policies[].policy.apiKey.location.cookie`|object|Read the credential from a request cookie.|
 |`policies[].policy.apiKey.location.cookie.name`|string|Cookie name containing the credential.|
 |`policies[].policy.apiKey.location.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
-|`policies[].policy.apiKey.budgets`|[]object|Budgets that apply to keys based on metadata fields. These budgets are independent of any budgets attached to individual keys.|
+|`policies[].policy.apiKey.budgets`|[]object|Budgets that apply to keys based on metadata fields. These budgets replace budgets attached to individual keys.|
 |`policies[].policy.apiKey.budgets[].name`|string|Stable name for this budget within its owning API key.|
 |`policies[].policy.apiKey.budgets[].limit`|object|Maximum usage allowed during the window.|
 |`policies[].policy.apiKey.budgets[].limit.unit`|enum|Possible values: `USD`, `Tokens`.|
@@ -26236,7 +26236,7 @@
 |`policies[].policy.apiKey.budgets[].window`|object|Rolling window over which usage will be accumulated.|
 |`policies[].policy.apiKey.budgets[].window.rolling`|string|Duration of the fixed usage window, for example `1h`, `24h`, or `30d`.<br>Windows are aligned to the Unix epoch rather than starting with the first request: `1h`<br>follows UTC clock hours, `24h` starts at midnight UTC, and `30d` uses consecutive 30-day<br>periods rather than calendar months.|
 |`policies[].policy.apiKey.budgets[].onBudgetExceeded`|enum|Action taken when the budget is exceeded.<br>Possible values: `Audit`, `Block`.|
-|`policies[].policy.apiKey.budgets[].scope`|object|Optional scope for this budget.<br>Exactly one of key, groupBy, or selector may be set.|
+|`policies[].policy.apiKey.budgets[].scope`|object|Scope for this budget.<br>Exactly one of key, groupBy, or selector may be set.|
 |`policies[].policy.apiKey.budgets[].scope.key`|string||
 |`policies[].policy.apiKey.budgets[].scope.groupBy`|[]string||
 |`policies[].policy.apiKey.budgets[].scope.selector`|object||
@@ -44846,7 +44846,7 @@
 |`routeGroups[].routes[].policies.apiKey.location.cookie`|object|Read the credential from a request cookie.|
 |`routeGroups[].routes[].policies.apiKey.location.cookie.name`|string|Cookie name containing the credential.|
 |`routeGroups[].routes[].policies.apiKey.location.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
-|`routeGroups[].routes[].policies.apiKey.budgets`|[]object|Budgets that apply to keys based on metadata fields. These budgets are independent of any budgets attached to individual keys.|
+|`routeGroups[].routes[].policies.apiKey.budgets`|[]object|Budgets that apply to keys based on metadata fields. These budgets replace budgets attached to individual keys.|
 |`routeGroups[].routes[].policies.apiKey.budgets[].name`|string|Stable name for this budget within its owning API key.|
 |`routeGroups[].routes[].policies.apiKey.budgets[].limit`|object|Maximum usage allowed during the window.|
 |`routeGroups[].routes[].policies.apiKey.budgets[].limit.unit`|enum|Possible values: `USD`, `Tokens`.|
@@ -44854,7 +44854,7 @@
 |`routeGroups[].routes[].policies.apiKey.budgets[].window`|object|Rolling window over which usage will be accumulated.|
 |`routeGroups[].routes[].policies.apiKey.budgets[].window.rolling`|string|Duration of the fixed usage window, for example `1h`, `24h`, or `30d`.<br>Windows are aligned to the Unix epoch rather than starting with the first request: `1h`<br>follows UTC clock hours, `24h` starts at midnight UTC, and `30d` uses consecutive 30-day<br>periods rather than calendar months.|
 |`routeGroups[].routes[].policies.apiKey.budgets[].onBudgetExceeded`|enum|Action taken when the budget is exceeded.<br>Possible values: `Audit`, `Block`.|
-|`routeGroups[].routes[].policies.apiKey.budgets[].scope`|object|Optional scope for this budget.<br>Exactly one of key, groupBy, or selector may be set.|
+|`routeGroups[].routes[].policies.apiKey.budgets[].scope`|object|Scope for this budget.<br>Exactly one of key, groupBy, or selector may be set.|
 |`routeGroups[].routes[].policies.apiKey.budgets[].scope.key`|string||
 |`routeGroups[].routes[].policies.apiKey.budgets[].scope.groupBy`|[]string||
 |`routeGroups[].routes[].policies.apiKey.budgets[].scope.selector`|object||
@@ -60465,7 +60465,7 @@
 |`gateways.*.listeners[].apiKey.location.cookie`|object|Read the credential from a request cookie.|
 |`gateways.*.listeners[].apiKey.location.cookie.name`|string|Cookie name containing the credential.|
 |`gateways.*.listeners[].apiKey.location.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
-|`gateways.*.listeners[].apiKey.budgets`|[]object|Budgets that apply to keys based on metadata fields. These budgets are independent of any budgets attached to individual keys.|
+|`gateways.*.listeners[].apiKey.budgets`|[]object|Budgets that apply to keys based on metadata fields. These budgets replace budgets attached to individual keys.|
 |`gateways.*.listeners[].apiKey.budgets[].name`|string|Stable name for this budget within its owning API key.|
 |`gateways.*.listeners[].apiKey.budgets[].limit`|object|Maximum usage allowed during the window.|
 |`gateways.*.listeners[].apiKey.budgets[].limit.unit`|enum|Possible values: `USD`, `Tokens`.|
@@ -60473,7 +60473,7 @@
 |`gateways.*.listeners[].apiKey.budgets[].window`|object|Rolling window over which usage will be accumulated.|
 |`gateways.*.listeners[].apiKey.budgets[].window.rolling`|string|Duration of the fixed usage window, for example `1h`, `24h`, or `30d`.<br>Windows are aligned to the Unix epoch rather than starting with the first request: `1h`<br>follows UTC clock hours, `24h` starts at midnight UTC, and `30d` uses consecutive 30-day<br>periods rather than calendar months.|
 |`gateways.*.listeners[].apiKey.budgets[].onBudgetExceeded`|enum|Action taken when the budget is exceeded.<br>Possible values: `Audit`, `Block`.|
-|`gateways.*.listeners[].apiKey.budgets[].scope`|object|Optional scope for this budget.<br>Exactly one of key, groupBy, or selector may be set.|
+|`gateways.*.listeners[].apiKey.budgets[].scope`|object|Scope for this budget.<br>Exactly one of key, groupBy, or selector may be set.|
 |`gateways.*.listeners[].apiKey.budgets[].scope.key`|string||
 |`gateways.*.listeners[].apiKey.budgets[].scope.groupBy`|[]string||
 |`gateways.*.listeners[].apiKey.budgets[].scope.selector`|object||
@@ -61800,7 +61800,7 @@
 |`gateways.*.apiKey.location.cookie`|object|Read the credential from a request cookie.|
 |`gateways.*.apiKey.location.cookie.name`|string|Cookie name containing the credential.|
 |`gateways.*.apiKey.location.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
-|`gateways.*.apiKey.budgets`|[]object|Budgets that apply to keys based on metadata fields. These budgets are independent of any budgets attached to individual keys.|
+|`gateways.*.apiKey.budgets`|[]object|Budgets that apply to keys based on metadata fields. These budgets replace budgets attached to individual keys.|
 |`gateways.*.apiKey.budgets[].name`|string|Stable name for this budget within its owning API key.|
 |`gateways.*.apiKey.budgets[].limit`|object|Maximum usage allowed during the window.|
 |`gateways.*.apiKey.budgets[].limit.unit`|enum|Possible values: `USD`, `Tokens`.|
@@ -61808,7 +61808,7 @@
 |`gateways.*.apiKey.budgets[].window`|object|Rolling window over which usage will be accumulated.|
 |`gateways.*.apiKey.budgets[].window.rolling`|string|Duration of the fixed usage window, for example `1h`, `24h`, or `30d`.<br>Windows are aligned to the Unix epoch rather than starting with the first request: `1h`<br>follows UTC clock hours, `24h` starts at midnight UTC, and `30d` uses consecutive 30-day<br>periods rather than calendar months.|
 |`gateways.*.apiKey.budgets[].onBudgetExceeded`|enum|Action taken when the budget is exceeded.<br>Possible values: `Audit`, `Block`.|
-|`gateways.*.apiKey.budgets[].scope`|object|Optional scope for this budget.<br>Exactly one of key, groupBy, or selector may be set.|
+|`gateways.*.apiKey.budgets[].scope`|object|Scope for this budget.<br>Exactly one of key, groupBy, or selector may be set.|
 |`gateways.*.apiKey.budgets[].scope.key`|string||
 |`gateways.*.apiKey.budgets[].scope.groupBy`|[]string||
 |`gateways.*.apiKey.budgets[].scope.selector`|object||
@@ -66143,7 +66143,7 @@
 |`routes[].policies.apiKey.location.cookie`|object|Read the credential from a request cookie.|
 |`routes[].policies.apiKey.location.cookie.name`|string|Cookie name containing the credential.|
 |`routes[].policies.apiKey.location.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
-|`routes[].policies.apiKey.budgets`|[]object|Budgets that apply to keys based on metadata fields. These budgets are independent of any budgets attached to individual keys.|
+|`routes[].policies.apiKey.budgets`|[]object|Budgets that apply to keys based on metadata fields. These budgets replace budgets attached to individual keys.|
 |`routes[].policies.apiKey.budgets[].name`|string|Stable name for this budget within its owning API key.|
 |`routes[].policies.apiKey.budgets[].limit`|object|Maximum usage allowed during the window.|
 |`routes[].policies.apiKey.budgets[].limit.unit`|enum|Possible values: `USD`, `Tokens`.|
@@ -66151,7 +66151,7 @@
 |`routes[].policies.apiKey.budgets[].window`|object|Rolling window over which usage will be accumulated.|
 |`routes[].policies.apiKey.budgets[].window.rolling`|string|Duration of the fixed usage window, for example `1h`, `24h`, or `30d`.<br>Windows are aligned to the Unix epoch rather than starting with the first request: `1h`<br>follows UTC clock hours, `24h` starts at midnight UTC, and `30d` uses consecutive 30-day<br>periods rather than calendar months.|
 |`routes[].policies.apiKey.budgets[].onBudgetExceeded`|enum|Action taken when the budget is exceeded.<br>Possible values: `Audit`, `Block`.|
-|`routes[].policies.apiKey.budgets[].scope`|object|Optional scope for this budget.<br>Exactly one of key, groupBy, or selector may be set.|
+|`routes[].policies.apiKey.budgets[].scope`|object|Scope for this budget.<br>Exactly one of key, groupBy, or selector may be set.|
 |`routes[].policies.apiKey.budgets[].scope.key`|string||
 |`routes[].policies.apiKey.budgets[].scope.groupBy`|[]string||
 |`routes[].policies.apiKey.budgets[].scope.selector`|object||
@@ -86129,7 +86129,7 @@
 |`llm.policies.apiKey.location.cookie`|object|Read the credential from a request cookie.|
 |`llm.policies.apiKey.location.cookie.name`|string|Cookie name containing the credential.|
 |`llm.policies.apiKey.location.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
-|`llm.policies.apiKey.budgets`|[]object|Budgets that apply to keys based on metadata fields. These budgets are independent of any budgets attached to individual keys.|
+|`llm.policies.apiKey.budgets`|[]object|Budgets that apply to keys based on metadata fields. These budgets replace budgets attached to individual keys.|
 |`llm.policies.apiKey.budgets[].name`|string|Stable name for this budget within its owning API key.|
 |`llm.policies.apiKey.budgets[].limit`|object|Maximum usage allowed during the window.|
 |`llm.policies.apiKey.budgets[].limit.unit`|enum|Possible values: `USD`, `Tokens`.|
@@ -86137,7 +86137,7 @@
 |`llm.policies.apiKey.budgets[].window`|object|Rolling window over which usage will be accumulated.|
 |`llm.policies.apiKey.budgets[].window.rolling`|string|Duration of the fixed usage window, for example `1h`, `24h`, or `30d`.<br>Windows are aligned to the Unix epoch rather than starting with the first request: `1h`<br>follows UTC clock hours, `24h` starts at midnight UTC, and `30d` uses consecutive 30-day<br>periods rather than calendar months.|
 |`llm.policies.apiKey.budgets[].onBudgetExceeded`|enum|Action taken when the budget is exceeded.<br>Possible values: `Audit`, `Block`.|
-|`llm.policies.apiKey.budgets[].scope`|object|Optional scope for this budget.<br>Exactly one of key, groupBy, or selector may be set.|
+|`llm.policies.apiKey.budgets[].scope`|object|Scope for this budget.<br>Exactly one of key, groupBy, or selector may be set.|
 |`llm.policies.apiKey.budgets[].scope.key`|string||
 |`llm.policies.apiKey.budgets[].scope.groupBy`|[]string||
 |`llm.policies.apiKey.budgets[].scope.selector`|object||
@@ -93643,7 +93643,7 @@
 |`mcp.policies.apiKey.location.cookie`|object|Read the credential from a request cookie.|
 |`mcp.policies.apiKey.location.cookie.name`|string|Cookie name containing the credential.|
 |`mcp.policies.apiKey.location.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
-|`mcp.policies.apiKey.budgets`|[]object|Budgets that apply to keys based on metadata fields. These budgets are independent of any budgets attached to individual keys.|
+|`mcp.policies.apiKey.budgets`|[]object|Budgets that apply to keys based on metadata fields. These budgets replace budgets attached to individual keys.|
 |`mcp.policies.apiKey.budgets[].name`|string|Stable name for this budget within its owning API key.|
 |`mcp.policies.apiKey.budgets[].limit`|object|Maximum usage allowed during the window.|
 |`mcp.policies.apiKey.budgets[].limit.unit`|enum|Possible values: `USD`, `Tokens`.|
@@ -93651,7 +93651,7 @@
 |`mcp.policies.apiKey.budgets[].window`|object|Rolling window over which usage will be accumulated.|
 |`mcp.policies.apiKey.budgets[].window.rolling`|string|Duration of the fixed usage window, for example `1h`, `24h`, or `30d`.<br>Windows are aligned to the Unix epoch rather than starting with the first request: `1h`<br>follows UTC clock hours, `24h` starts at midnight UTC, and `30d` uses consecutive 30-day<br>periods rather than calendar months.|
 |`mcp.policies.apiKey.budgets[].onBudgetExceeded`|enum|Action taken when the budget is exceeded.<br>Possible values: `Audit`, `Block`.|
-|`mcp.policies.apiKey.budgets[].scope`|object|Optional scope for this budget.<br>Exactly one of key, groupBy, or selector may be set.|
+|`mcp.policies.apiKey.budgets[].scope`|object|Scope for this budget.<br>Exactly one of key, groupBy, or selector may be set.|
 |`mcp.policies.apiKey.budgets[].scope.key`|string||
 |`mcp.policies.apiKey.budgets[].scope.groupBy`|[]string||
 |`mcp.policies.apiKey.budgets[].scope.selector`|object||
@@ -96444,7 +96444,7 @@
 |`ui.policies.apiKey.location.cookie`|object|Read the credential from a request cookie.|
 |`ui.policies.apiKey.location.cookie.name`|string|Cookie name containing the credential.|
 |`ui.policies.apiKey.location.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
-|`ui.policies.apiKey.budgets`|[]object|Budgets that apply to keys based on metadata fields. These budgets are independent of any budgets attached to individual keys.|
+|`ui.policies.apiKey.budgets`|[]object|Budgets that apply to keys based on metadata fields. These budgets replace budgets attached to individual keys.|
 |`ui.policies.apiKey.budgets[].name`|string|Stable name for this budget within its owning API key.|
 |`ui.policies.apiKey.budgets[].limit`|object|Maximum usage allowed during the window.|
 |`ui.policies.apiKey.budgets[].limit.unit`|enum|Possible values: `USD`, `Tokens`.|
@@ -96452,7 +96452,7 @@
 |`ui.policies.apiKey.budgets[].window`|object|Rolling window over which usage will be accumulated.|
 |`ui.policies.apiKey.budgets[].window.rolling`|string|Duration of the fixed usage window, for example `1h`, `24h`, or `30d`.<br>Windows are aligned to the Unix epoch rather than starting with the first request: `1h`<br>follows UTC clock hours, `24h` starts at midnight UTC, and `30d` uses consecutive 30-day<br>periods rather than calendar months.|
 |`ui.policies.apiKey.budgets[].onBudgetExceeded`|enum|Action taken when the budget is exceeded.<br>Possible values: `Audit`, `Block`.|
-|`ui.policies.apiKey.budgets[].scope`|object|Optional scope for this budget.<br>Exactly one of key, groupBy, or selector may be set.|
+|`ui.policies.apiKey.budgets[].scope`|object|Scope for this budget.<br>Exactly one of key, groupBy, or selector may be set.|
 |`ui.policies.apiKey.budgets[].scope.key`|string||
 |`ui.policies.apiKey.budgets[].scope.groupBy`|[]string||
 |`ui.policies.apiKey.budgets[].scope.selector`|object||
