@@ -67,7 +67,7 @@ async fn llm_token_budget_persists_and_blocks_requests() {
 		agentgateway::database::DatabasePool::connect_with_max_connections("sqlite::memory:", Some(1))
 			.await
 			.unwrap();
-	let fn_sha256 = |s: String | hex::encode(crypto::digest::sha256(s.as_bytes()));
+	let fn_sha256 = |s: String| hex::encode(crypto::digest::sha256(s.as_bytes()));
 	let policy = json!({
 		"apiKey": {
 			"keys": [
