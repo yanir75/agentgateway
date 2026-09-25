@@ -2,6 +2,7 @@ use chrono::Utc;
 use rust_decimal::Decimal;
 
 use super::BudgetPolicy;
+use crate::http::budget::ResolvedBudgetScope;
 
 #[derive(Debug, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -14,7 +15,8 @@ pub struct BudgetStatusResponse {
 #[derive(Debug, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BudgetStatus {
-	pub api_key_name: String,
+	pub id: String,
+	pub api_key_id: String,
 	pub name: String,
 	pub limit: BudgetStatusLimit,
 	pub usage: BudgetStatusUsage,
@@ -50,16 +52,32 @@ pub struct BudgetStatusWindow {
 impl BudgetPolicy {
 	/// Returns a point-in-time status snapshot, optionally filtered by API key display name.
 	/// Expired counters are reported with zero usage even if no request has advanced their window.
-	pub fn status(&self, api_key_name: Option<&str>) -> anyhow::Result<BudgetStatusResponse> {
+	pub fn status(&self, api_key_id: Option<&str>) -> anyhow::Result<BudgetStatusResponse> {
 		let observed_at = Utc::now();
 		let mut budgets = self
 			.counters
 			.iter()
 			.filter_map(|counter| {
 				let definition = counter.definition.as_ref()?;
-				if !api_key_name.is_none_or(|name| definition.api_key == name) {
+				let key_id = match api_key_id {
+					Some(val) => val,
+					None => return None,
+				};
+				if match &definition.scope {
+					ResolvedBudgetScope::Key { api_key_id: id } => id != key_id,
+					_ => false,
+				} {
 					return None;
 				}
+				// if api_key_id.is_none_or(|key_id| match &definition.scope {
+				// 	ResolvedBudgetScope::Key { api_key_id } => api_key_id != key_id,
+				// 	_ => false,
+				// }) {
+				// 	return None;
+				// }
+				// if !api_key_id.is_none_or(|name| definition.api_key == name) {
+				// 	return None;
+				// }
 				let limit = definition.budget.limit.amount.decimal();
 				let expired = observed_at >= counter.window_end;
 				let used = if expired {
@@ -69,7 +87,8 @@ impl BudgetPolicy {
 				};
 				let remaining = (limit - used).max(Decimal::ZERO);
 				Some(BudgetStatus {
-					api_key_name: definition.api_key.clone(),
+					id: definition.id.clone(),
+					api_key_id: key_id.to_owned(),
 					name: definition.budget.name.clone(),
 					limit: BudgetStatusLimit {
 						unit: definition.budget.limit.unit.as_str().to_owned(),
@@ -92,7 +111,7 @@ impl BudgetPolicy {
 				})
 			})
 			.collect::<Vec<_>>();
-		budgets.sort_by(|a, b| (&a.api_key_name, &a.name).cmp(&(&b.api_key_name, &b.name)));
+		budgets.sort_by(|a, b| (&a.id, &a.name).cmp(&(&b.id, &b.name)));
 		Ok(BudgetStatusResponse {
 			observed_at: observed_at.timestamp_millis(),
 			budgets,

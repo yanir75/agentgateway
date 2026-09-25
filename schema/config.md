@@ -4453,14 +4453,6 @@
 |`binds[].listeners[].routes[].policies.apiKey.keys[].key`|string|API key value to accept.|
 |`binds[].listeners[].routes[].policies.apiKey.keys[].metadata`|any|Optional metadata attached to requests authenticated with this key.|
 |`binds[].listeners[].routes[].policies.apiKey.keys[].allowedModels`|[]string|Model patterns this key is allowed to access.<br>Omitted means no additional constraint; an empty list denies all models.|
-|`binds[].listeners[].routes[].policies.apiKey.keys[].budgets`|[]object|Independent budgets charged after LLM responses. A request is not charged when its provider<br>does not report the usage or cost required by the budget unit.|
-|`binds[].listeners[].routes[].policies.apiKey.keys[].budgets[].name`|string|Stable name for this budget within its owning API key.|
-|`binds[].listeners[].routes[].policies.apiKey.keys[].budgets[].limit`|object|Maximum usage allowed during the window.|
-|`binds[].listeners[].routes[].policies.apiKey.keys[].budgets[].limit.unit`|enum|Possible values: `USD`, `Tokens`.|
-|`binds[].listeners[].routes[].policies.apiKey.keys[].budgets[].limit.amount`|number||
-|`binds[].listeners[].routes[].policies.apiKey.keys[].budgets[].window`|object|Rolling window over which usage will be accumulated.|
-|`binds[].listeners[].routes[].policies.apiKey.keys[].budgets[].window.rolling`|string|Duration of the fixed usage window, for example `1h`, `24h`, or `30d`.<br>Windows are aligned to the Unix epoch rather than starting with the first request: `1h`<br>follows UTC clock hours, `24h` starts at midnight UTC, and `30d` uses consecutive 30-day<br>periods rather than calendar months.|
-|`binds[].listeners[].routes[].policies.apiKey.keys[].budgets[].onBudgetExceeded`|enum|Action taken when the budget is exceeded.<br>Possible values: `Audit`, `Block`.|
 |`binds[].listeners[].routes[].policies.apiKey.keys[].keyHash`|string|SHA-256 hash of an API key value to accept, in `sha256:<hex>` format.|
 |`binds[].listeners[].routes[].policies.apiKey.mode`|enum|Controls whether requests must include a valid API key.<br>Possible values: `strict`, `optional`, `permissive`.|
 |`binds[].listeners[].routes[].policies.apiKey.location`|object|Where to read the API key from in incoming requests.<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
@@ -4472,6 +4464,18 @@
 |`binds[].listeners[].routes[].policies.apiKey.location.cookie`|object|Read the credential from a request cookie.|
 |`binds[].listeners[].routes[].policies.apiKey.location.cookie.name`|string|Cookie name containing the credential.|
 |`binds[].listeners[].routes[].policies.apiKey.location.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`binds[].listeners[].routes[].policies.apiKey.budgets`|[]object|Budgets that apply to keys based on metadata fields. These budgets are independent of any budgets attached to individual keys.|
+|`binds[].listeners[].routes[].policies.apiKey.budgets[].name`|string|Stable name for this budget within its owning API key.|
+|`binds[].listeners[].routes[].policies.apiKey.budgets[].limit`|object|Maximum usage allowed during the window.|
+|`binds[].listeners[].routes[].policies.apiKey.budgets[].limit.unit`|enum|Possible values: `USD`, `Tokens`.|
+|`binds[].listeners[].routes[].policies.apiKey.budgets[].limit.amount`|number||
+|`binds[].listeners[].routes[].policies.apiKey.budgets[].window`|object|Rolling window over which usage will be accumulated.|
+|`binds[].listeners[].routes[].policies.apiKey.budgets[].window.rolling`|string|Duration of the fixed usage window, for example `1h`, `24h`, or `30d`.<br>Windows are aligned to the Unix epoch rather than starting with the first request: `1h`<br>follows UTC clock hours, `24h` starts at midnight UTC, and `30d` uses consecutive 30-day<br>periods rather than calendar months.|
+|`binds[].listeners[].routes[].policies.apiKey.budgets[].onBudgetExceeded`|enum|Action taken when the budget is exceeded.<br>Possible values: `Audit`, `Block`.|
+|`binds[].listeners[].routes[].policies.apiKey.budgets[].scope`|object|Optional scope for this budget.<br>Exactly one of key, groupBy, or selector may be set.|
+|`binds[].listeners[].routes[].policies.apiKey.budgets[].scope.key`|string||
+|`binds[].listeners[].routes[].policies.apiKey.budgets[].scope.groupBy`|[]string||
+|`binds[].listeners[].routes[].policies.apiKey.budgets[].scope.selector`|object||
 |`binds[].listeners[].routes[].policies.extAuthz`|object|Authorize incoming requests by calling an external authorization service.|
 |`binds[].listeners[].routes[].policies.extAuthz.conditional`|[]object|conditional policy entries. An entry without a condition must be the final fallback.|
 |`binds[].listeners[].routes[].policies.extAuthz.conditional[].service`|object|Service reference. Service must be defined in the top level services list.|
@@ -20361,14 +20365,6 @@
 |`binds[].listeners[].policies.apiKey.keys[].key`|string|API key value to accept.|
 |`binds[].listeners[].policies.apiKey.keys[].metadata`|any|Optional metadata attached to requests authenticated with this key.|
 |`binds[].listeners[].policies.apiKey.keys[].allowedModels`|[]string|Model patterns this key is allowed to access.<br>Omitted means no additional constraint; an empty list denies all models.|
-|`binds[].listeners[].policies.apiKey.keys[].budgets`|[]object|Independent budgets charged after LLM responses. A request is not charged when its provider<br>does not report the usage or cost required by the budget unit.|
-|`binds[].listeners[].policies.apiKey.keys[].budgets[].name`|string|Stable name for this budget within its owning API key.|
-|`binds[].listeners[].policies.apiKey.keys[].budgets[].limit`|object|Maximum usage allowed during the window.|
-|`binds[].listeners[].policies.apiKey.keys[].budgets[].limit.unit`|enum|Possible values: `USD`, `Tokens`.|
-|`binds[].listeners[].policies.apiKey.keys[].budgets[].limit.amount`|number||
-|`binds[].listeners[].policies.apiKey.keys[].budgets[].window`|object|Rolling window over which usage will be accumulated.|
-|`binds[].listeners[].policies.apiKey.keys[].budgets[].window.rolling`|string|Duration of the fixed usage window, for example `1h`, `24h`, or `30d`.<br>Windows are aligned to the Unix epoch rather than starting with the first request: `1h`<br>follows UTC clock hours, `24h` starts at midnight UTC, and `30d` uses consecutive 30-day<br>periods rather than calendar months.|
-|`binds[].listeners[].policies.apiKey.keys[].budgets[].onBudgetExceeded`|enum|Action taken when the budget is exceeded.<br>Possible values: `Audit`, `Block`.|
 |`binds[].listeners[].policies.apiKey.keys[].keyHash`|string|SHA-256 hash of an API key value to accept, in `sha256:<hex>` format.|
 |`binds[].listeners[].policies.apiKey.mode`|enum|Controls whether requests must include a valid API key.<br>Possible values: `strict`, `optional`, `permissive`.|
 |`binds[].listeners[].policies.apiKey.location`|object|Where to read the API key from in incoming requests.<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
@@ -20380,6 +20376,18 @@
 |`binds[].listeners[].policies.apiKey.location.cookie`|object|Read the credential from a request cookie.|
 |`binds[].listeners[].policies.apiKey.location.cookie.name`|string|Cookie name containing the credential.|
 |`binds[].listeners[].policies.apiKey.location.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`binds[].listeners[].policies.apiKey.budgets`|[]object|Budgets that apply to keys based on metadata fields. These budgets are independent of any budgets attached to individual keys.|
+|`binds[].listeners[].policies.apiKey.budgets[].name`|string|Stable name for this budget within its owning API key.|
+|`binds[].listeners[].policies.apiKey.budgets[].limit`|object|Maximum usage allowed during the window.|
+|`binds[].listeners[].policies.apiKey.budgets[].limit.unit`|enum|Possible values: `USD`, `Tokens`.|
+|`binds[].listeners[].policies.apiKey.budgets[].limit.amount`|number||
+|`binds[].listeners[].policies.apiKey.budgets[].window`|object|Rolling window over which usage will be accumulated.|
+|`binds[].listeners[].policies.apiKey.budgets[].window.rolling`|string|Duration of the fixed usage window, for example `1h`, `24h`, or `30d`.<br>Windows are aligned to the Unix epoch rather than starting with the first request: `1h`<br>follows UTC clock hours, `24h` starts at midnight UTC, and `30d` uses consecutive 30-day<br>periods rather than calendar months.|
+|`binds[].listeners[].policies.apiKey.budgets[].onBudgetExceeded`|enum|Action taken when the budget is exceeded.<br>Possible values: `Audit`, `Block`.|
+|`binds[].listeners[].policies.apiKey.budgets[].scope`|object|Optional scope for this budget.<br>Exactly one of key, groupBy, or selector may be set.|
+|`binds[].listeners[].policies.apiKey.budgets[].scope.key`|string||
+|`binds[].listeners[].policies.apiKey.budgets[].scope.groupBy`|[]string||
+|`binds[].listeners[].policies.apiKey.budgets[].scope.selector`|object||
 |`binds[].tunnelProtocol`|enum|Protocol used to tunnel backend connections, such as Direct or HBONE.<br>Possible values: `direct`, `hboneWaypoint`, `hboneGateway`, `proxy`, `connect`.|
 |`binds[].mode`|enum|Whether the bind opens an OS listener socket. Defaults to `standard` (binds the port).<br>Set to `internal` to create a routing-only bind that does not bind a socket.<br>Possible values: `standard`, `internal`.|
 |`frontendPolicies`|object|frontendPolicies defines top level policies applying to all traffic.|
@@ -26209,14 +26217,6 @@
 |`policies[].policy.apiKey.keys[].key`|string|API key value to accept.|
 |`policies[].policy.apiKey.keys[].metadata`|any|Optional metadata attached to requests authenticated with this key.|
 |`policies[].policy.apiKey.keys[].allowedModels`|[]string|Model patterns this key is allowed to access.<br>Omitted means no additional constraint; an empty list denies all models.|
-|`policies[].policy.apiKey.keys[].budgets`|[]object|Independent budgets charged after LLM responses. A request is not charged when its provider<br>does not report the usage or cost required by the budget unit.|
-|`policies[].policy.apiKey.keys[].budgets[].name`|string|Stable name for this budget within its owning API key.|
-|`policies[].policy.apiKey.keys[].budgets[].limit`|object|Maximum usage allowed during the window.|
-|`policies[].policy.apiKey.keys[].budgets[].limit.unit`|enum|Possible values: `USD`, `Tokens`.|
-|`policies[].policy.apiKey.keys[].budgets[].limit.amount`|number||
-|`policies[].policy.apiKey.keys[].budgets[].window`|object|Rolling window over which usage will be accumulated.|
-|`policies[].policy.apiKey.keys[].budgets[].window.rolling`|string|Duration of the fixed usage window, for example `1h`, `24h`, or `30d`.<br>Windows are aligned to the Unix epoch rather than starting with the first request: `1h`<br>follows UTC clock hours, `24h` starts at midnight UTC, and `30d` uses consecutive 30-day<br>periods rather than calendar months.|
-|`policies[].policy.apiKey.keys[].budgets[].onBudgetExceeded`|enum|Action taken when the budget is exceeded.<br>Possible values: `Audit`, `Block`.|
 |`policies[].policy.apiKey.keys[].keyHash`|string|SHA-256 hash of an API key value to accept, in `sha256:<hex>` format.|
 |`policies[].policy.apiKey.mode`|enum|Controls whether requests must include a valid API key.<br>Possible values: `strict`, `optional`, `permissive`.|
 |`policies[].policy.apiKey.location`|object|Where to read the API key from in incoming requests.<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
@@ -26228,6 +26228,18 @@
 |`policies[].policy.apiKey.location.cookie`|object|Read the credential from a request cookie.|
 |`policies[].policy.apiKey.location.cookie.name`|string|Cookie name containing the credential.|
 |`policies[].policy.apiKey.location.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`policies[].policy.apiKey.budgets`|[]object|Budgets that apply to keys based on metadata fields. These budgets are independent of any budgets attached to individual keys.|
+|`policies[].policy.apiKey.budgets[].name`|string|Stable name for this budget within its owning API key.|
+|`policies[].policy.apiKey.budgets[].limit`|object|Maximum usage allowed during the window.|
+|`policies[].policy.apiKey.budgets[].limit.unit`|enum|Possible values: `USD`, `Tokens`.|
+|`policies[].policy.apiKey.budgets[].limit.amount`|number||
+|`policies[].policy.apiKey.budgets[].window`|object|Rolling window over which usage will be accumulated.|
+|`policies[].policy.apiKey.budgets[].window.rolling`|string|Duration of the fixed usage window, for example `1h`, `24h`, or `30d`.<br>Windows are aligned to the Unix epoch rather than starting with the first request: `1h`<br>follows UTC clock hours, `24h` starts at midnight UTC, and `30d` uses consecutive 30-day<br>periods rather than calendar months.|
+|`policies[].policy.apiKey.budgets[].onBudgetExceeded`|enum|Action taken when the budget is exceeded.<br>Possible values: `Audit`, `Block`.|
+|`policies[].policy.apiKey.budgets[].scope`|object|Optional scope for this budget.<br>Exactly one of key, groupBy, or selector may be set.|
+|`policies[].policy.apiKey.budgets[].scope.key`|string||
+|`policies[].policy.apiKey.budgets[].scope.groupBy`|[]string||
+|`policies[].policy.apiKey.budgets[].scope.selector`|object||
 |`policies[].policy.extAuthz`|object|Authorize incoming requests by calling an external authorization service.|
 |`policies[].policy.extAuthz.conditional`|[]object|conditional policy entries. An entry without a condition must be the final fallback.|
 |`policies[].policy.extAuthz.conditional[].service`|object|Service reference. Service must be defined in the top level services list.|
@@ -44823,14 +44835,6 @@
 |`routeGroups[].routes[].policies.apiKey.keys[].key`|string|API key value to accept.|
 |`routeGroups[].routes[].policies.apiKey.keys[].metadata`|any|Optional metadata attached to requests authenticated with this key.|
 |`routeGroups[].routes[].policies.apiKey.keys[].allowedModels`|[]string|Model patterns this key is allowed to access.<br>Omitted means no additional constraint; an empty list denies all models.|
-|`routeGroups[].routes[].policies.apiKey.keys[].budgets`|[]object|Independent budgets charged after LLM responses. A request is not charged when its provider<br>does not report the usage or cost required by the budget unit.|
-|`routeGroups[].routes[].policies.apiKey.keys[].budgets[].name`|string|Stable name for this budget within its owning API key.|
-|`routeGroups[].routes[].policies.apiKey.keys[].budgets[].limit`|object|Maximum usage allowed during the window.|
-|`routeGroups[].routes[].policies.apiKey.keys[].budgets[].limit.unit`|enum|Possible values: `USD`, `Tokens`.|
-|`routeGroups[].routes[].policies.apiKey.keys[].budgets[].limit.amount`|number||
-|`routeGroups[].routes[].policies.apiKey.keys[].budgets[].window`|object|Rolling window over which usage will be accumulated.|
-|`routeGroups[].routes[].policies.apiKey.keys[].budgets[].window.rolling`|string|Duration of the fixed usage window, for example `1h`, `24h`, or `30d`.<br>Windows are aligned to the Unix epoch rather than starting with the first request: `1h`<br>follows UTC clock hours, `24h` starts at midnight UTC, and `30d` uses consecutive 30-day<br>periods rather than calendar months.|
-|`routeGroups[].routes[].policies.apiKey.keys[].budgets[].onBudgetExceeded`|enum|Action taken when the budget is exceeded.<br>Possible values: `Audit`, `Block`.|
 |`routeGroups[].routes[].policies.apiKey.keys[].keyHash`|string|SHA-256 hash of an API key value to accept, in `sha256:<hex>` format.|
 |`routeGroups[].routes[].policies.apiKey.mode`|enum|Controls whether requests must include a valid API key.<br>Possible values: `strict`, `optional`, `permissive`.|
 |`routeGroups[].routes[].policies.apiKey.location`|object|Where to read the API key from in incoming requests.<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
@@ -44842,6 +44846,18 @@
 |`routeGroups[].routes[].policies.apiKey.location.cookie`|object|Read the credential from a request cookie.|
 |`routeGroups[].routes[].policies.apiKey.location.cookie.name`|string|Cookie name containing the credential.|
 |`routeGroups[].routes[].policies.apiKey.location.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`routeGroups[].routes[].policies.apiKey.budgets`|[]object|Budgets that apply to keys based on metadata fields. These budgets are independent of any budgets attached to individual keys.|
+|`routeGroups[].routes[].policies.apiKey.budgets[].name`|string|Stable name for this budget within its owning API key.|
+|`routeGroups[].routes[].policies.apiKey.budgets[].limit`|object|Maximum usage allowed during the window.|
+|`routeGroups[].routes[].policies.apiKey.budgets[].limit.unit`|enum|Possible values: `USD`, `Tokens`.|
+|`routeGroups[].routes[].policies.apiKey.budgets[].limit.amount`|number||
+|`routeGroups[].routes[].policies.apiKey.budgets[].window`|object|Rolling window over which usage will be accumulated.|
+|`routeGroups[].routes[].policies.apiKey.budgets[].window.rolling`|string|Duration of the fixed usage window, for example `1h`, `24h`, or `30d`.<br>Windows are aligned to the Unix epoch rather than starting with the first request: `1h`<br>follows UTC clock hours, `24h` starts at midnight UTC, and `30d` uses consecutive 30-day<br>periods rather than calendar months.|
+|`routeGroups[].routes[].policies.apiKey.budgets[].onBudgetExceeded`|enum|Action taken when the budget is exceeded.<br>Possible values: `Audit`, `Block`.|
+|`routeGroups[].routes[].policies.apiKey.budgets[].scope`|object|Optional scope for this budget.<br>Exactly one of key, groupBy, or selector may be set.|
+|`routeGroups[].routes[].policies.apiKey.budgets[].scope.key`|string||
+|`routeGroups[].routes[].policies.apiKey.budgets[].scope.groupBy`|[]string||
+|`routeGroups[].routes[].policies.apiKey.budgets[].scope.selector`|object||
 |`routeGroups[].routes[].policies.extAuthz`|object|Authorize incoming requests by calling an external authorization service.|
 |`routeGroups[].routes[].policies.extAuthz.conditional`|[]object|conditional policy entries. An entry without a condition must be the final fallback.|
 |`routeGroups[].routes[].policies.extAuthz.conditional[].service`|object|Service reference. Service must be defined in the top level services list.|
@@ -60438,14 +60454,6 @@
 |`gateways.*.listeners[].apiKey.keys[].key`|string|API key value to accept.|
 |`gateways.*.listeners[].apiKey.keys[].metadata`|any|Optional metadata attached to requests authenticated with this key.|
 |`gateways.*.listeners[].apiKey.keys[].allowedModels`|[]string|Model patterns this key is allowed to access.<br>Omitted means no additional constraint; an empty list denies all models.|
-|`gateways.*.listeners[].apiKey.keys[].budgets`|[]object|Independent budgets charged after LLM responses. A request is not charged when its provider<br>does not report the usage or cost required by the budget unit.|
-|`gateways.*.listeners[].apiKey.keys[].budgets[].name`|string|Stable name for this budget within its owning API key.|
-|`gateways.*.listeners[].apiKey.keys[].budgets[].limit`|object|Maximum usage allowed during the window.|
-|`gateways.*.listeners[].apiKey.keys[].budgets[].limit.unit`|enum|Possible values: `USD`, `Tokens`.|
-|`gateways.*.listeners[].apiKey.keys[].budgets[].limit.amount`|number||
-|`gateways.*.listeners[].apiKey.keys[].budgets[].window`|object|Rolling window over which usage will be accumulated.|
-|`gateways.*.listeners[].apiKey.keys[].budgets[].window.rolling`|string|Duration of the fixed usage window, for example `1h`, `24h`, or `30d`.<br>Windows are aligned to the Unix epoch rather than starting with the first request: `1h`<br>follows UTC clock hours, `24h` starts at midnight UTC, and `30d` uses consecutive 30-day<br>periods rather than calendar months.|
-|`gateways.*.listeners[].apiKey.keys[].budgets[].onBudgetExceeded`|enum|Action taken when the budget is exceeded.<br>Possible values: `Audit`, `Block`.|
 |`gateways.*.listeners[].apiKey.keys[].keyHash`|string|SHA-256 hash of an API key value to accept, in `sha256:<hex>` format.|
 |`gateways.*.listeners[].apiKey.mode`|enum|Controls whether requests must include a valid API key.<br>Possible values: `strict`, `optional`, `permissive`.|
 |`gateways.*.listeners[].apiKey.location`|object|Where to read the API key from in incoming requests.<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
@@ -60457,6 +60465,18 @@
 |`gateways.*.listeners[].apiKey.location.cookie`|object|Read the credential from a request cookie.|
 |`gateways.*.listeners[].apiKey.location.cookie.name`|string|Cookie name containing the credential.|
 |`gateways.*.listeners[].apiKey.location.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`gateways.*.listeners[].apiKey.budgets`|[]object|Budgets that apply to keys based on metadata fields. These budgets are independent of any budgets attached to individual keys.|
+|`gateways.*.listeners[].apiKey.budgets[].name`|string|Stable name for this budget within its owning API key.|
+|`gateways.*.listeners[].apiKey.budgets[].limit`|object|Maximum usage allowed during the window.|
+|`gateways.*.listeners[].apiKey.budgets[].limit.unit`|enum|Possible values: `USD`, `Tokens`.|
+|`gateways.*.listeners[].apiKey.budgets[].limit.amount`|number||
+|`gateways.*.listeners[].apiKey.budgets[].window`|object|Rolling window over which usage will be accumulated.|
+|`gateways.*.listeners[].apiKey.budgets[].window.rolling`|string|Duration of the fixed usage window, for example `1h`, `24h`, or `30d`.<br>Windows are aligned to the Unix epoch rather than starting with the first request: `1h`<br>follows UTC clock hours, `24h` starts at midnight UTC, and `30d` uses consecutive 30-day<br>periods rather than calendar months.|
+|`gateways.*.listeners[].apiKey.budgets[].onBudgetExceeded`|enum|Action taken when the budget is exceeded.<br>Possible values: `Audit`, `Block`.|
+|`gateways.*.listeners[].apiKey.budgets[].scope`|object|Optional scope for this budget.<br>Exactly one of key, groupBy, or selector may be set.|
+|`gateways.*.listeners[].apiKey.budgets[].scope.key`|string||
+|`gateways.*.listeners[].apiKey.budgets[].scope.groupBy`|[]string||
+|`gateways.*.listeners[].apiKey.budgets[].scope.selector`|object||
 |`gateways.*.tls`|object|tls enables HTTPS for this gateway. Maybe not be set with `listeners`|
 |`gateways.*.tls.mode`|enum|Certificate source mode. Static mode uses cert/key as the leaf certificate; dynamic CA<br>mode uses cert/key as a CA for on-demand SNI leaf certificate issuance.<br>Unused when `spiffe` is set.<br>Possible values: `static`, `dynamicCa`.|
 |`gateways.*.tls.cert`|string|Path to the TLS certificate file (leaf certificate, or CA certificate in dynamic CA mode).<br>Required unless `spiffe` is set.|
@@ -61769,14 +61789,6 @@
 |`gateways.*.apiKey.keys[].key`|string|API key value to accept.|
 |`gateways.*.apiKey.keys[].metadata`|any|Optional metadata attached to requests authenticated with this key.|
 |`gateways.*.apiKey.keys[].allowedModels`|[]string|Model patterns this key is allowed to access.<br>Omitted means no additional constraint; an empty list denies all models.|
-|`gateways.*.apiKey.keys[].budgets`|[]object|Independent budgets charged after LLM responses. A request is not charged when its provider<br>does not report the usage or cost required by the budget unit.|
-|`gateways.*.apiKey.keys[].budgets[].name`|string|Stable name for this budget within its owning API key.|
-|`gateways.*.apiKey.keys[].budgets[].limit`|object|Maximum usage allowed during the window.|
-|`gateways.*.apiKey.keys[].budgets[].limit.unit`|enum|Possible values: `USD`, `Tokens`.|
-|`gateways.*.apiKey.keys[].budgets[].limit.amount`|number||
-|`gateways.*.apiKey.keys[].budgets[].window`|object|Rolling window over which usage will be accumulated.|
-|`gateways.*.apiKey.keys[].budgets[].window.rolling`|string|Duration of the fixed usage window, for example `1h`, `24h`, or `30d`.<br>Windows are aligned to the Unix epoch rather than starting with the first request: `1h`<br>follows UTC clock hours, `24h` starts at midnight UTC, and `30d` uses consecutive 30-day<br>periods rather than calendar months.|
-|`gateways.*.apiKey.keys[].budgets[].onBudgetExceeded`|enum|Action taken when the budget is exceeded.<br>Possible values: `Audit`, `Block`.|
 |`gateways.*.apiKey.keys[].keyHash`|string|SHA-256 hash of an API key value to accept, in `sha256:<hex>` format.|
 |`gateways.*.apiKey.mode`|enum|Controls whether requests must include a valid API key.<br>Possible values: `strict`, `optional`, `permissive`.|
 |`gateways.*.apiKey.location`|object|Where to read the API key from in incoming requests.<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
@@ -61788,6 +61800,18 @@
 |`gateways.*.apiKey.location.cookie`|object|Read the credential from a request cookie.|
 |`gateways.*.apiKey.location.cookie.name`|string|Cookie name containing the credential.|
 |`gateways.*.apiKey.location.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`gateways.*.apiKey.budgets`|[]object|Budgets that apply to keys based on metadata fields. These budgets are independent of any budgets attached to individual keys.|
+|`gateways.*.apiKey.budgets[].name`|string|Stable name for this budget within its owning API key.|
+|`gateways.*.apiKey.budgets[].limit`|object|Maximum usage allowed during the window.|
+|`gateways.*.apiKey.budgets[].limit.unit`|enum|Possible values: `USD`, `Tokens`.|
+|`gateways.*.apiKey.budgets[].limit.amount`|number||
+|`gateways.*.apiKey.budgets[].window`|object|Rolling window over which usage will be accumulated.|
+|`gateways.*.apiKey.budgets[].window.rolling`|string|Duration of the fixed usage window, for example `1h`, `24h`, or `30d`.<br>Windows are aligned to the Unix epoch rather than starting with the first request: `1h`<br>follows UTC clock hours, `24h` starts at midnight UTC, and `30d` uses consecutive 30-day<br>periods rather than calendar months.|
+|`gateways.*.apiKey.budgets[].onBudgetExceeded`|enum|Action taken when the budget is exceeded.<br>Possible values: `Audit`, `Block`.|
+|`gateways.*.apiKey.budgets[].scope`|object|Optional scope for this budget.<br>Exactly one of key, groupBy, or selector may be set.|
+|`gateways.*.apiKey.budgets[].scope.key`|string||
+|`gateways.*.apiKey.budgets[].scope.groupBy`|[]string||
+|`gateways.*.apiKey.budgets[].scope.selector`|object||
 |`routes`|[]object|routes defines HTTP routes attached to one or more named gateways.|
 |`routes[].gateways`|string|gateways attaches this route to named gateways or gateway listeners.<br>This can take the form of `<gateway-name>` or `<gateway-name>/<listener-name>` to attach to a specific listener within a gateway.<br>If unset, the 'default' gateway will be used.|
 |`routes[].name`|string|Name identifying this route.|
@@ -66108,14 +66132,6 @@
 |`routes[].policies.apiKey.keys[].key`|string|API key value to accept.|
 |`routes[].policies.apiKey.keys[].metadata`|any|Optional metadata attached to requests authenticated with this key.|
 |`routes[].policies.apiKey.keys[].allowedModels`|[]string|Model patterns this key is allowed to access.<br>Omitted means no additional constraint; an empty list denies all models.|
-|`routes[].policies.apiKey.keys[].budgets`|[]object|Independent budgets charged after LLM responses. A request is not charged when its provider<br>does not report the usage or cost required by the budget unit.|
-|`routes[].policies.apiKey.keys[].budgets[].name`|string|Stable name for this budget within its owning API key.|
-|`routes[].policies.apiKey.keys[].budgets[].limit`|object|Maximum usage allowed during the window.|
-|`routes[].policies.apiKey.keys[].budgets[].limit.unit`|enum|Possible values: `USD`, `Tokens`.|
-|`routes[].policies.apiKey.keys[].budgets[].limit.amount`|number||
-|`routes[].policies.apiKey.keys[].budgets[].window`|object|Rolling window over which usage will be accumulated.|
-|`routes[].policies.apiKey.keys[].budgets[].window.rolling`|string|Duration of the fixed usage window, for example `1h`, `24h`, or `30d`.<br>Windows are aligned to the Unix epoch rather than starting with the first request: `1h`<br>follows UTC clock hours, `24h` starts at midnight UTC, and `30d` uses consecutive 30-day<br>periods rather than calendar months.|
-|`routes[].policies.apiKey.keys[].budgets[].onBudgetExceeded`|enum|Action taken when the budget is exceeded.<br>Possible values: `Audit`, `Block`.|
 |`routes[].policies.apiKey.keys[].keyHash`|string|SHA-256 hash of an API key value to accept, in `sha256:<hex>` format.|
 |`routes[].policies.apiKey.mode`|enum|Controls whether requests must include a valid API key.<br>Possible values: `strict`, `optional`, `permissive`.|
 |`routes[].policies.apiKey.location`|object|Where to read the API key from in incoming requests.<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
@@ -66127,6 +66143,18 @@
 |`routes[].policies.apiKey.location.cookie`|object|Read the credential from a request cookie.|
 |`routes[].policies.apiKey.location.cookie.name`|string|Cookie name containing the credential.|
 |`routes[].policies.apiKey.location.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`routes[].policies.apiKey.budgets`|[]object|Budgets that apply to keys based on metadata fields. These budgets are independent of any budgets attached to individual keys.|
+|`routes[].policies.apiKey.budgets[].name`|string|Stable name for this budget within its owning API key.|
+|`routes[].policies.apiKey.budgets[].limit`|object|Maximum usage allowed during the window.|
+|`routes[].policies.apiKey.budgets[].limit.unit`|enum|Possible values: `USD`, `Tokens`.|
+|`routes[].policies.apiKey.budgets[].limit.amount`|number||
+|`routes[].policies.apiKey.budgets[].window`|object|Rolling window over which usage will be accumulated.|
+|`routes[].policies.apiKey.budgets[].window.rolling`|string|Duration of the fixed usage window, for example `1h`, `24h`, or `30d`.<br>Windows are aligned to the Unix epoch rather than starting with the first request: `1h`<br>follows UTC clock hours, `24h` starts at midnight UTC, and `30d` uses consecutive 30-day<br>periods rather than calendar months.|
+|`routes[].policies.apiKey.budgets[].onBudgetExceeded`|enum|Action taken when the budget is exceeded.<br>Possible values: `Audit`, `Block`.|
+|`routes[].policies.apiKey.budgets[].scope`|object|Optional scope for this budget.<br>Exactly one of key, groupBy, or selector may be set.|
+|`routes[].policies.apiKey.budgets[].scope.key`|string||
+|`routes[].policies.apiKey.budgets[].scope.groupBy`|[]string||
+|`routes[].policies.apiKey.budgets[].scope.selector`|object||
 |`routes[].policies.extAuthz`|object|Authorize incoming requests by calling an external authorization service.|
 |`routes[].policies.extAuthz.conditional`|[]object|conditional policy entries. An entry without a condition must be the final fallback.|
 |`routes[].policies.extAuthz.conditional[].service`|object|Service reference. Service must be defined in the top level services list.|
@@ -86089,14 +86117,6 @@
 |`llm.policies.apiKey.keys[].key`|string|API key value to accept.|
 |`llm.policies.apiKey.keys[].metadata`|any|Optional metadata attached to requests authenticated with this key.|
 |`llm.policies.apiKey.keys[].allowedModels`|[]string|Model patterns this key is allowed to access.<br>Omitted means no additional constraint; an empty list denies all models.|
-|`llm.policies.apiKey.keys[].budgets`|[]object|Independent budgets charged after LLM responses. A request is not charged when its provider<br>does not report the usage or cost required by the budget unit.|
-|`llm.policies.apiKey.keys[].budgets[].name`|string|Stable name for this budget within its owning API key.|
-|`llm.policies.apiKey.keys[].budgets[].limit`|object|Maximum usage allowed during the window.|
-|`llm.policies.apiKey.keys[].budgets[].limit.unit`|enum|Possible values: `USD`, `Tokens`.|
-|`llm.policies.apiKey.keys[].budgets[].limit.amount`|number||
-|`llm.policies.apiKey.keys[].budgets[].window`|object|Rolling window over which usage will be accumulated.|
-|`llm.policies.apiKey.keys[].budgets[].window.rolling`|string|Duration of the fixed usage window, for example `1h`, `24h`, or `30d`.<br>Windows are aligned to the Unix epoch rather than starting with the first request: `1h`<br>follows UTC clock hours, `24h` starts at midnight UTC, and `30d` uses consecutive 30-day<br>periods rather than calendar months.|
-|`llm.policies.apiKey.keys[].budgets[].onBudgetExceeded`|enum|Action taken when the budget is exceeded.<br>Possible values: `Audit`, `Block`.|
 |`llm.policies.apiKey.keys[].keyHash`|string|SHA-256 hash of an API key value to accept, in `sha256:<hex>` format.|
 |`llm.policies.apiKey.mode`|enum|Controls whether requests must include a valid API key.<br>Possible values: `strict`, `optional`, `permissive`.|
 |`llm.policies.apiKey.location`|object|Where to read the API key from in incoming requests.<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
@@ -86108,6 +86128,18 @@
 |`llm.policies.apiKey.location.cookie`|object|Read the credential from a request cookie.|
 |`llm.policies.apiKey.location.cookie.name`|string|Cookie name containing the credential.|
 |`llm.policies.apiKey.location.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`llm.policies.apiKey.budgets`|[]object|Budgets that apply to keys based on metadata fields. These budgets are independent of any budgets attached to individual keys.|
+|`llm.policies.apiKey.budgets[].name`|string|Stable name for this budget within its owning API key.|
+|`llm.policies.apiKey.budgets[].limit`|object|Maximum usage allowed during the window.|
+|`llm.policies.apiKey.budgets[].limit.unit`|enum|Possible values: `USD`, `Tokens`.|
+|`llm.policies.apiKey.budgets[].limit.amount`|number||
+|`llm.policies.apiKey.budgets[].window`|object|Rolling window over which usage will be accumulated.|
+|`llm.policies.apiKey.budgets[].window.rolling`|string|Duration of the fixed usage window, for example `1h`, `24h`, or `30d`.<br>Windows are aligned to the Unix epoch rather than starting with the first request: `1h`<br>follows UTC clock hours, `24h` starts at midnight UTC, and `30d` uses consecutive 30-day<br>periods rather than calendar months.|
+|`llm.policies.apiKey.budgets[].onBudgetExceeded`|enum|Action taken when the budget is exceeded.<br>Possible values: `Audit`, `Block`.|
+|`llm.policies.apiKey.budgets[].scope`|object|Optional scope for this budget.<br>Exactly one of key, groupBy, or selector may be set.|
+|`llm.policies.apiKey.budgets[].scope.key`|string||
+|`llm.policies.apiKey.budgets[].scope.groupBy`|[]string||
+|`llm.policies.apiKey.budgets[].scope.selector`|object||
 |`llm.policies.guardrails`|object|Guardrails to apply to every configured model.|
 |`llm.policies.guardrails.streaming`|enum|Apply prompt guards to streaming responses and realtime websocket messages.<br>Possible values: `Disabled`, `Enabled`.|
 |`llm.policies.guardrails.request`|[]object|Guards applied to client requests before they reach the LLM.|
@@ -93599,14 +93631,6 @@
 |`mcp.policies.apiKey.keys[].key`|string|API key value to accept.|
 |`mcp.policies.apiKey.keys[].metadata`|any|Optional metadata attached to requests authenticated with this key.|
 |`mcp.policies.apiKey.keys[].allowedModels`|[]string|Model patterns this key is allowed to access.<br>Omitted means no additional constraint; an empty list denies all models.|
-|`mcp.policies.apiKey.keys[].budgets`|[]object|Independent budgets charged after LLM responses. A request is not charged when its provider<br>does not report the usage or cost required by the budget unit.|
-|`mcp.policies.apiKey.keys[].budgets[].name`|string|Stable name for this budget within its owning API key.|
-|`mcp.policies.apiKey.keys[].budgets[].limit`|object|Maximum usage allowed during the window.|
-|`mcp.policies.apiKey.keys[].budgets[].limit.unit`|enum|Possible values: `USD`, `Tokens`.|
-|`mcp.policies.apiKey.keys[].budgets[].limit.amount`|number||
-|`mcp.policies.apiKey.keys[].budgets[].window`|object|Rolling window over which usage will be accumulated.|
-|`mcp.policies.apiKey.keys[].budgets[].window.rolling`|string|Duration of the fixed usage window, for example `1h`, `24h`, or `30d`.<br>Windows are aligned to the Unix epoch rather than starting with the first request: `1h`<br>follows UTC clock hours, `24h` starts at midnight UTC, and `30d` uses consecutive 30-day<br>periods rather than calendar months.|
-|`mcp.policies.apiKey.keys[].budgets[].onBudgetExceeded`|enum|Action taken when the budget is exceeded.<br>Possible values: `Audit`, `Block`.|
 |`mcp.policies.apiKey.keys[].keyHash`|string|SHA-256 hash of an API key value to accept, in `sha256:<hex>` format.|
 |`mcp.policies.apiKey.mode`|enum|Controls whether requests must include a valid API key.<br>Possible values: `strict`, `optional`, `permissive`.|
 |`mcp.policies.apiKey.location`|object|Where to read the API key from in incoming requests.<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
@@ -93618,6 +93642,18 @@
 |`mcp.policies.apiKey.location.cookie`|object|Read the credential from a request cookie.|
 |`mcp.policies.apiKey.location.cookie.name`|string|Cookie name containing the credential.|
 |`mcp.policies.apiKey.location.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`mcp.policies.apiKey.budgets`|[]object|Budgets that apply to keys based on metadata fields. These budgets are independent of any budgets attached to individual keys.|
+|`mcp.policies.apiKey.budgets[].name`|string|Stable name for this budget within its owning API key.|
+|`mcp.policies.apiKey.budgets[].limit`|object|Maximum usage allowed during the window.|
+|`mcp.policies.apiKey.budgets[].limit.unit`|enum|Possible values: `USD`, `Tokens`.|
+|`mcp.policies.apiKey.budgets[].limit.amount`|number||
+|`mcp.policies.apiKey.budgets[].window`|object|Rolling window over which usage will be accumulated.|
+|`mcp.policies.apiKey.budgets[].window.rolling`|string|Duration of the fixed usage window, for example `1h`, `24h`, or `30d`.<br>Windows are aligned to the Unix epoch rather than starting with the first request: `1h`<br>follows UTC clock hours, `24h` starts at midnight UTC, and `30d` uses consecutive 30-day<br>periods rather than calendar months.|
+|`mcp.policies.apiKey.budgets[].onBudgetExceeded`|enum|Action taken when the budget is exceeded.<br>Possible values: `Audit`, `Block`.|
+|`mcp.policies.apiKey.budgets[].scope`|object|Optional scope for this budget.<br>Exactly one of key, groupBy, or selector may be set.|
+|`mcp.policies.apiKey.budgets[].scope.key`|string||
+|`mcp.policies.apiKey.budgets[].scope.groupBy`|[]string||
+|`mcp.policies.apiKey.budgets[].scope.selector`|object||
 |`mcp.policies.extAuthz`|object|Authorize incoming requests by calling an external authorization service.|
 |`mcp.policies.extAuthz.conditional`|[]object|conditional policy entries. An entry without a condition must be the final fallback.|
 |`mcp.policies.extAuthz.conditional[].service`|object|Service reference. Service must be defined in the top level services list.|
@@ -96396,14 +96432,6 @@
 |`ui.policies.apiKey.keys[].key`|string|API key value to accept.|
 |`ui.policies.apiKey.keys[].metadata`|any|Optional metadata attached to requests authenticated with this key.|
 |`ui.policies.apiKey.keys[].allowedModels`|[]string|Model patterns this key is allowed to access.<br>Omitted means no additional constraint; an empty list denies all models.|
-|`ui.policies.apiKey.keys[].budgets`|[]object|Independent budgets charged after LLM responses. A request is not charged when its provider<br>does not report the usage or cost required by the budget unit.|
-|`ui.policies.apiKey.keys[].budgets[].name`|string|Stable name for this budget within its owning API key.|
-|`ui.policies.apiKey.keys[].budgets[].limit`|object|Maximum usage allowed during the window.|
-|`ui.policies.apiKey.keys[].budgets[].limit.unit`|enum|Possible values: `USD`, `Tokens`.|
-|`ui.policies.apiKey.keys[].budgets[].limit.amount`|number||
-|`ui.policies.apiKey.keys[].budgets[].window`|object|Rolling window over which usage will be accumulated.|
-|`ui.policies.apiKey.keys[].budgets[].window.rolling`|string|Duration of the fixed usage window, for example `1h`, `24h`, or `30d`.<br>Windows are aligned to the Unix epoch rather than starting with the first request: `1h`<br>follows UTC clock hours, `24h` starts at midnight UTC, and `30d` uses consecutive 30-day<br>periods rather than calendar months.|
-|`ui.policies.apiKey.keys[].budgets[].onBudgetExceeded`|enum|Action taken when the budget is exceeded.<br>Possible values: `Audit`, `Block`.|
 |`ui.policies.apiKey.keys[].keyHash`|string|SHA-256 hash of an API key value to accept, in `sha256:<hex>` format.|
 |`ui.policies.apiKey.mode`|enum|Controls whether requests must include a valid API key.<br>Possible values: `strict`, `optional`, `permissive`.|
 |`ui.policies.apiKey.location`|object|Where to read the API key from in incoming requests.<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
@@ -96415,5 +96443,17 @@
 |`ui.policies.apiKey.location.cookie`|object|Read the credential from a request cookie.|
 |`ui.policies.apiKey.location.cookie.name`|string|Cookie name containing the credential.|
 |`ui.policies.apiKey.location.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`ui.policies.apiKey.budgets`|[]object|Budgets that apply to keys based on metadata fields. These budgets are independent of any budgets attached to individual keys.|
+|`ui.policies.apiKey.budgets[].name`|string|Stable name for this budget within its owning API key.|
+|`ui.policies.apiKey.budgets[].limit`|object|Maximum usage allowed during the window.|
+|`ui.policies.apiKey.budgets[].limit.unit`|enum|Possible values: `USD`, `Tokens`.|
+|`ui.policies.apiKey.budgets[].limit.amount`|number||
+|`ui.policies.apiKey.budgets[].window`|object|Rolling window over which usage will be accumulated.|
+|`ui.policies.apiKey.budgets[].window.rolling`|string|Duration of the fixed usage window, for example `1h`, `24h`, or `30d`.<br>Windows are aligned to the Unix epoch rather than starting with the first request: `1h`<br>follows UTC clock hours, `24h` starts at midnight UTC, and `30d` uses consecutive 30-day<br>periods rather than calendar months.|
+|`ui.policies.apiKey.budgets[].onBudgetExceeded`|enum|Action taken when the budget is exceeded.<br>Possible values: `Audit`, `Block`.|
+|`ui.policies.apiKey.budgets[].scope`|object|Optional scope for this budget.<br>Exactly one of key, groupBy, or selector may be set.|
+|`ui.policies.apiKey.budgets[].scope.key`|string||
+|`ui.policies.apiKey.budgets[].scope.groupBy`|[]string||
+|`ui.policies.apiKey.budgets[].scope.selector`|object||
 |`ui.policies.csrf`|object|Handle CSRF protection by validating request origins against configured allowed origins.|
 |`ui.policies.csrf.additionalOrigins`|[]string|Additional trusted origins allowed to send state-changing requests.|

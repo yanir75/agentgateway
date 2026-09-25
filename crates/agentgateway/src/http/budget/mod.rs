@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, HashMap,BTreeSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::str::FromStr;
 use std::sync::{Arc, OnceLock};
 use std::time::Duration;
@@ -39,7 +39,12 @@ struct BudgetCounter {
 }
 
 impl BudgetCounter {
-	fn configured(api_key: &str, budget: &Budget, now: UnixDate) -> anyhow::Result<Self> {
+	fn configured(
+		id: &str,
+		scope: &ResolvedBudgetScope,
+		budget: &Budget,
+		now: UnixDate,
+	) -> anyhow::Result<Self> {
 		let rolling = budget.window.rolling;
 		anyhow::ensure!(
 			!rolling.is_zero(),
@@ -48,7 +53,8 @@ impl BudgetCounter {
 		let (window_start, window_end) = budget_window(now, rolling)?;
 		Ok(Self {
 			definition: Some(BudgetDefinition {
-				api_key: api_key.to_owned(),
+				id: id.to_owned(),
+				scope: scope.clone(),
 				budget: budget.clone(),
 			}),
 			amount: Decimal::ZERO,
@@ -62,7 +68,13 @@ impl BudgetCounter {
 	}
 
 	/// Attaches the latest definition and resets runtime state if its window or unit changed.
-	fn configure(&mut self, api_key: &str, budget: &Budget, now: UnixDate) -> anyhow::Result<()> {
+	fn configure(
+		&mut self,
+		id: &str,
+		scope: &ResolvedBudgetScope,
+		budget: &Budget,
+		now: UnixDate,
+	) -> anyhow::Result<()> {
 		let rolling = budget.window.rolling;
 		anyhow::ensure!(
 			!rolling.is_zero(),
@@ -77,7 +89,8 @@ impl BudgetCounter {
 		}
 		self.rolling = rolling;
 		self.definition = Some(BudgetDefinition {
-			api_key: api_key.to_owned(),
+			id: id.to_owned(),
+			scope: scope.clone(),
 			budget: budget.clone(),
 		});
 		Ok(())
@@ -117,7 +130,8 @@ struct PendingBudgetUsage {
 
 #[derive(Debug, Clone)]
 struct BudgetDefinition {
-	api_key: String,
+	id: String,
+	scope: ResolvedBudgetScope,
 	budget: Budget,
 }
 
@@ -130,17 +144,9 @@ pub enum BudgetScope {
 
 #[derive(Debug, Clone)]
 pub enum ResolvedBudgetScope {
-	Key {
-		id: String,
-		api_key_id: String,
-	},
-	GroupBy{
-		id: String,
-		values: BTreeMap<String, String>,
-	},
-	Selector {
-		id: String,
-	},
+	Key { api_key_id: String },
+	GroupBy { values: BTreeMap<String, String> },
+	Selector,
 }
 
 /// A named budget attached to a standalone API key.
@@ -164,10 +170,25 @@ pub struct Budget {
 
 impl Budget {
 	pub fn validate(&self) -> anyhow::Result<()> {
-		anyhow::ensure!(
-			!self.name.is_empty(),
-			"budget names must not be empty"
-		);
+		anyhow::ensure!(!self.name.is_empty(), "budget names must not be empty");
+		match &self.scope {
+			BudgetScope::Key(_) => {},
+			BudgetScope::GroupBy(b) => {
+				anyhow::ensure!(
+					!b.is_empty(),
+					"budget {:?} group by filters must have metadata fields",
+					self.name
+				)
+			},
+			BudgetScope::Selector(m) => {
+				anyhow::ensure!(
+					m.values().all(|f| !f.is_empty()) && m.keys().all(|f| !f.is_empty()),
+					"budget {:?} selector keys and values cannot be empty",
+					self.name
+				)
+			},
+		}
+
 		let window_ms = self.window.rolling.as_millis();
 		anyhow::ensure!(
 			window_ms > 0,
@@ -201,14 +222,20 @@ impl Budget {
 		Ok(())
 	}
 
-	pub fn resolve_scope(&self, api_key_id: &str, metadata: &serde_json::Value) -> Option<ResolvedBudgetScope> {
+	pub fn resolve_scope(
+		&self,
+		api_key_id: &str,
+		metadata: &serde_json::Value,
+	) -> Option<(String, ResolvedBudgetScope)> {
 		match &self.scope {
 			BudgetScope::Key(id) => {
 				if id == api_key_id {
-					Some(ResolvedBudgetScope::Key {
-						id: format!("api-key:{}:budget:{}", id, self.name),
-						api_key_id: id.to_owned(),
-					})
+					Some((
+						format!("api-key:{}:budget:{}", id, self.name),
+						ResolvedBudgetScope::Key {
+							api_key_id: id.to_owned(),
+						},
+					))
 				} else {
 					None
 				}
@@ -219,10 +246,15 @@ impl Budget {
 					let value = metadata.get(field)?.as_str()?.to_owned();
 					values.insert(field.to_owned(), value);
 				}
-				Some(ResolvedBudgetScope::GroupBy {
-					id: format!("{}={}", values.keys().map(String::as_str).join("."), values.values().map(String::as_str).join(".")),
-					values: values
-				})
+
+				Some((
+					format!(
+						"{}={}",
+						values.keys().map(String::as_str).join("."),
+						values.values().map(String::as_str).join(".")
+					),
+					ResolvedBudgetScope::GroupBy { values: values },
+				))
 			},
 			BudgetScope::Selector(selector) => {
 				for (key, value) in selector {
@@ -230,30 +262,29 @@ impl Budget {
 						return None;
 					}
 				}
-				Some(ResolvedBudgetScope::Selector {
-					id: self.name.to_owned(),
-				})
+
+				Some((self.name.clone(), ResolvedBudgetScope::Selector))
 			},
 		}
 	}
 
-
-	pub fn resolve_budget(&self, api_key: &str, metadata: &serde_json::Value) -> Option<MatchedBudget> {
-		let resolved_scope = self.resolve_scope(api_key, &metadata)?;
+	pub fn resolve(
+		&self,
+		api_key: &str,
+		metadata: &serde_json::Value,
+	) -> Option<MatchedBudget> {
+		let (id, resolved_scope) = self.resolve_scope(api_key, &metadata)?;
 		Some(MatchedBudget {
+			id: id,
 			scope: resolved_scope,
 			budget: self.clone(),
 		})
-		
 	}
-	
 }
-
 
 #[apply(schema_de!)]
 #[derive(Default)]
 pub struct Budgets(Vec<Budget>);
-
 
 impl Budgets {
 	pub fn validate(&self) -> anyhow::Result<()> {
@@ -269,11 +300,15 @@ impl Budgets {
 		Ok(())
 	}
 
-	pub fn resolve_budgets(&self, api_key: &str, metadata: &serde_json::Value) -> MatchedBudgets {
-		let matched_budgets = self.0.iter()
-			.filter_map(|budget| budget.resolve_budget(api_key, metadata))
+	pub fn resolve(&self, api_key: &str, metadata: &serde_json::Value) -> MatchedBudgets {
+		let matched_budgets = self
+			.0
+			.iter()
+			.filter_map(|budget| budget.resolve(api_key, metadata))
 			.collect();
-		MatchedBudgets { budgets: matched_budgets }
+		MatchedBudgets {
+			budgets: matched_budgets,
+		}
 	}
 }
 
@@ -395,20 +430,12 @@ impl BudgetExceededAction {
 pub struct MatchedBudget {
 	scope: ResolvedBudgetScope,
 	budget: Budget,
+	id: String,
 }
 
-impl MatchedBudget {
-	fn id(&self) -> String {
-		match &self.scope {
-			ResolvedBudgetScope::Key { id, .. } => id.clone(),
-			ResolvedBudgetScope::GroupBy { id, .. } => id.clone(),
-			ResolvedBudgetScope::Selector { id } => id.clone(),
-		}
-	}
-}
 #[derive(Debug, Clone)]
-pub struct MatchedBudgets{
-	pub(crate) budgets: Vec<MatchedBudget>
+pub struct MatchedBudgets {
+	pub(crate) budgets: Vec<MatchedBudget>,
 }
 
 #[derive(Debug, Clone, Default, serde::Serialize)]
@@ -444,8 +471,6 @@ pub struct BudgetSettlement {
 pub struct BudgetExceeded {
 	pub retry_after: u64,
 }
-
-
 
 /// Returns the half-open fixed window `[start, end)` containing `now`.
 ///
@@ -497,11 +522,12 @@ impl BudgetPolicy {
 				Entry::Occupied(mut entry) => {
 					entry
 						.get_mut()
-						.configure(&definition.api_key, &definition.budget, now)?
+						.configure(&definition.id, &definition.scope, &definition.budget, now)?
 				},
 				Entry::Vacant(entry) => {
 					entry.insert(BudgetCounter::configured(
-						&definition.api_key,
+						&definition.id,
+						&definition.scope,
 						&definition.budget,
 						now,
 					)?);
@@ -538,22 +564,30 @@ impl BudgetPolicy {
 			};
 			for budget in &budgets.budgets {
 				if let Some(registration) = &self.registration {
-					BudgetCounter::configured(&budgets.api_key, budget, now)?;
+					BudgetCounter::configured(&budget.id, &budget.scope, &budget.budget, now)?;
 					registration.insert(
-						budget.id(),
+						budget.id.to_owned(),
 						BudgetDefinition {
-							api_key: budgets.api_key.clone(),
-							budget: budget.clone(),
+							id: budget.id.to_owned(),
+							scope: budget.scope.clone(),
+							budget: budget.budget.clone(),
 						},
 					);
 					continue;
 				}
-				match self.counters.entry(budget.id()) {
+				match self.counters.entry(budget.id.clone()) {
 					Entry::Occupied(mut entry) => {
-						entry.get_mut().configure(&budgets.api_key, budget, now)?;
+						entry
+							.get_mut()
+							.configure(&budget.id, &budget.scope, &budget.budget, now)?;
 					},
 					Entry::Vacant(entry) => {
-						entry.insert(BudgetCounter::configured(&budgets.api_key, budget, now)?);
+						entry.insert(BudgetCounter::configured(
+							&budget.id,
+							&budget.scope,
+							&budget.budget,
+							now,
+						)?);
 					},
 				}
 			}
@@ -567,43 +601,44 @@ impl BudgetPolicy {
 		let now = Utc::now();
 		let mut blocked = None;
 		for budget in &budgets.budgets {
-			let budget_id = budget_id(&budgets.api_key_id, budget);
 			let (used, window_end) = {
 				let mut counter = self
 					.counters
-					.get_mut(&budget_id)
+					.get_mut(&budget.id)
 					.context("budget counter was not registered")?;
 				counter.refresh(now);
 				(counter.amount, counter.window_end)
 			};
-			let exceeded = used >= budget.limit.amount.decimal();
+			let exceeded = used >= budget.budget.limit.amount.decimal();
 			if exceeded {
 				tracing::warn!(
 					target: "budget",
-					api_key = budgets.api_key,
-					budget = budget.name,
+					api_key = budget.id,
+					budget = budget.budget.name,
 					used = %used,
-					limit_unit = budget.limit.unit.as_str(),
-					limit_amount = %budget.limit.amount,
+					limit_unit = budget.budget.limit.unit.as_str(),
+					limit_amount = %budget.budget.limit.amount,
 					exceeded,
 					"API key budget exceeded"
 				);
 			} else {
 				tracing::debug!(
 					target: "budget",
-					api_key = budgets.api_key,
-					budget = budget.name,
+					id = budget.id,
+					budget = budget.budget.name,
 					used = %used,
-					limit_unit = budget.limit.unit.as_str(),
-					limit_amount = %budget.limit.amount,
+					limit_unit = budget.budget.limit.unit.as_str(),
+					limit_amount = %budget.budget.limit.amount,
 					exceeded,
 					"API key budget checked"
 				);
 			}
 
 			if exceeded
-				&& matches!(budget.on_budget_exceeded, BudgetExceededAction::Block)
-				&& blocked.is_none()
+				&& matches!(
+					budget.budget.on_budget_exceeded,
+					BudgetExceededAction::Block
+				) && blocked.is_none()
 			{
 				let retry_after = (window_end - now).to_std().unwrap_or_default();
 				blocked = Some(BudgetExceeded {
@@ -622,24 +657,23 @@ impl BudgetPolicy {
 	fn settle(&self, budgets: &MatchedBudgets, response: &LLMContext) {
 		let now = Utc::now();
 		for budget in &budgets.budgets {
-			let charged = match budget.limit.unit {
+			let charged = match budget.budget.limit.unit {
 				BudgetLimitUnit::Usd => response.cost.as_ref().map(|cost| cost.total()),
 				BudgetLimitUnit::Tokens => response.total_tokens.map(Decimal::from),
 			};
 			let Some(charged) = charged else {
 				tracing::debug!(
 					target: "budget",
-					api_key = budgets.api_key,
-					budget = budget.name,
-					limit_unit = budget.limit.unit.as_str(),
+					id = budget.id,
+					budget = budget.budget.name,
+					limit_unit = budget.budget.limit.unit.as_str(),
 					"API key budget could not be charged because usage was unavailable"
 				);
 				continue;
 			};
 
-			let budget_id = budget_id(&budgets.api_key_id, budget);
-			let Some(mut counter) = self.counters.get_mut(&budget_id) else {
-				tracing::warn!(target: "budget", budget_id, "budget counter was not registered before settlement");
+			let Some(mut counter) = self.counters.get_mut(&budget.id) else {
+				tracing::warn!(target: "budget", budget_id = budget.id, "budget counter was not registered before settlement");
 				continue;
 			};
 			counter.refresh(now);
@@ -651,12 +685,12 @@ impl BudgetPolicy {
 
 			tracing::debug!(
 				target: "budget",
-				api_key = budgets.api_key,
-				budget = budget.name,
+				id = budget.id,
+				budget = budget.budget.name,
 				charged = %charged,
 				used = %used,
-				limit_unit = budget.limit.unit.as_str(),
-				limit_amount = %budget.limit.amount,
+				limit_unit = budget.budget.limit.unit.as_str(),
+				limit_amount = %budget.budget.limit.amount,
 				"API key budget charged"
 			);
 		}
@@ -697,7 +731,10 @@ impl crate::store::RequestPolicyTrait for BudgetPolicy {
 
 #[cfg(test)]
 mod tests {
+	use serde_json::json;
+
 	use super::*;
+	use crate::http::budget::BudgetScope::Key;
 
 	#[test]
 	fn budgets_require_a_database() {
@@ -729,28 +766,30 @@ mod tests {
 		let current: crate::http::apikey::LocalAPIKeys = serde_json::from_value(serde_json::json!({
 			"keys": [{
 				"key": "sk-budget",
-				"metadata": {"name": "budgeted-key"},
-				"budgets": [{
+				"metadata": {"name": "budgeted-key","agentgateway.dev/id":"sk-budget"},
+			}],
+			"budgets": [{
 					"name": "old",
 					"limit": {"unit": "Tokens", "amount": 40},
 					"window": {"rolling": "1h"},
-					"onBudgetExceeded": "Block"
+					"onBudgetExceeded": "Block",
+					"scope": {"key":"sk-budget"}
 				}]
-			}]
 		}))
 		.unwrap();
 		let replacement: crate::http::apikey::LocalAPIKeys =
 			serde_json::from_value(serde_json::json!({
 				"keys": [{
 					"key": "sk-budget",
-					"metadata": {"name": "budgeted-key"},
-					"budgets": [{
+					"metadata": {"name": "budgeted-key","agentgateway.dev/id":"sk-budget"},
+				}],
+				"budgets": [{
 						"name": "new",
 						"limit": {"unit": "Tokens", "amount": 80},
 						"window": {"rolling": "1h"},
-						"onBudgetExceeded": "Audit"
+						"onBudgetExceeded": "Audit",
+						"scope": {"key":"sk-budget"}
 					}]
-				}]
 			}))
 			.unwrap();
 		let policy = BudgetPolicy::default();
@@ -760,7 +799,7 @@ mod tests {
 		candidate
 			.register(&replacement.compile().unwrap(), true)
 			.unwrap();
-		assert_eq!(policy.status(None).unwrap().budgets[0].name, "old");
+		assert_eq!(policy.status(Some(&"sk-budget".to_owned())).unwrap().budgets[0].name, "old");
 
 		policy.apply_registration(candidate.registration()).unwrap();
 		let status = policy.status(None).unwrap();
@@ -810,6 +849,7 @@ CREATE TABLE budget_usage (
 				rolling: Duration::from_secs(60 * 60),
 			},
 			on_budget_exceeded: BudgetExceededAction::Block,
+			scope: Key("key".to_owned()),
 		};
 		let now = Utc::now();
 		let (window_start, window_end) = budget_window(now, Duration::from_secs(60 * 60)).unwrap();
@@ -823,9 +863,16 @@ CREATE TABLE budget_usage (
 		.await
 		.unwrap();
 		let preloaded = Arc::new(BudgetPolicy::default());
+		let resolved_budget = budget.resolve("key", &json!({})).unwrap();
 		preloaded.counters.insert(
 			"preloaded".to_string(),
-			BudgetCounter::configured("key", &budget, now).unwrap(),
+			BudgetCounter::configured(
+				&resolved_budget.id,
+				&resolved_budget.scope,
+				&resolved_budget.budget,
+				now,
+			)
+			.unwrap(),
 		);
 		preloaded
 			.initialize(crate::database::DatabasePool::Sqlite(pool.clone()))
@@ -843,11 +890,23 @@ CREATE TABLE budget_usage (
 		assert_eq!(expired, 0);
 		first.counters.insert(
 			"window".to_string(),
-			BudgetCounter::configured("key", &budget, now).unwrap(),
+			BudgetCounter::configured(
+				&resolved_budget.id,
+				&resolved_budget.scope,
+				&resolved_budget.budget,
+				now,
+			)
+			.unwrap(),
 		);
 		second.counters.insert(
 			"window".to_string(),
-			BudgetCounter::configured("key", &budget, now).unwrap(),
+			BudgetCounter::configured(
+				&resolved_budget.id,
+				&resolved_budget.scope,
+				&resolved_budget.budget,
+				now,
+			)
+			.unwrap(),
 		);
 		assert_eq!(
 			first.counters.get("window").unwrap().window_start,
@@ -891,8 +950,16 @@ CREATE TABLE budget_usage (
 				rolling: Duration::from_secs(60 * 60),
 			},
 			on_budget_exceeded: BudgetExceededAction::Block,
+			scope: Key("key".to_owned()),
 		};
-		let mut expired_residue = BudgetCounter::configured("key", &usd_budget, now).unwrap();
+		let resolved_usd_budget = usd_budget.resolve(&"key".to_owned(), &json!({})).unwrap();
+		let mut expired_residue = BudgetCounter::configured(
+			&resolved_usd_budget.id,
+			&resolved_usd_budget.scope,
+			&resolved_usd_budget.budget,
+			now,
+		)
+		.unwrap();
 		expired_residue.amount = Decimal::new(1, 10);
 		expired_residue.pending = Decimal::new(1, 10);
 		expired_residue.window_start = UnixDate::from_timestamp_millis(0).unwrap();

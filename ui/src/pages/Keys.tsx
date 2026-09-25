@@ -296,7 +296,7 @@ export function KeysPage() {
 										</td>
 										<td>
 											<BudgetSummary
-												apiKeyName={keyName(item)}
+												apiKeyId={keyId(item)}
 												value={item.budgets}
 												status={budgetStatus.data}
 											/>
@@ -796,7 +796,7 @@ function KeyEditor(props: {
 						API key budgets require <code>config.database</code> to be configured.
 					</StatusBanner>
 				) : null}
-				<BudgetEditor budgets={budgets} apiKeyName={keyName(props.initial)} onChange={setBudgets} />
+				<BudgetEditor budgets={budgets} apiKeyId={keyId(props.initial)} onChange={setBudgets} />
 				{submitted && invalidBudgets ? (
 					<StatusBanner state="bad" title="Invalid budgets">
 						Budget names must be present and unique, rolling windows are required, and amounts must
@@ -891,7 +891,7 @@ function KeyEditor(props: {
 
 function BudgetEditor(props: {
 	budgets: VirtualApiKeyBudget[];
-	apiKeyName: string;
+	apiKeyId: string;
 	onChange: (budgets: VirtualApiKeyBudget[]) => void;
 }) {
 	const [editingIndex, setEditingIndex] = useState<number | null>(null);
@@ -904,7 +904,10 @@ function BudgetEditor(props: {
 				name: '',
 				limit: { unit: 'USD', amount: 0 },
 				window: { rolling: '30d' },
-				onBudgetExceeded: 'Audit'
+				onBudgetExceeded: 'Audit',
+				scope: {
+					key: props.apiKeyId
+				}
 			}
 		]);
 		setEditingIndex(props.budgets.length);
@@ -932,7 +935,7 @@ function BudgetEditor(props: {
 					{props.budgets.map((budget, index) => {
 						const editing = editingIndex === index;
 						const live = status.data?.budgets.find(
-							item => item.apiKeyName === props.apiKeyName && item.name === budget.name.trim()
+							item => item.apiKeyId === props.apiKeyId && item.name === budget.name.trim()
 						);
 						return (
 							// biome-ignore lint/suspicious/noArrayIndexKey: Existing lint violation; remove this suppression when the underlying issue is fixed.
@@ -1261,7 +1264,7 @@ function AllowedModelsSummary(props: { value?: string[] | null }) {
 }
 
 function BudgetSummary(props: {
-	apiKeyName: string;
+	apiKeyId: string;
 	value?: VirtualApiKeyBudget[];
 	status?: BudgetStatusResponse;
 }) {
@@ -1271,7 +1274,7 @@ function BudgetSummary(props: {
 		<div className="key-budget-summary">
 			{budgets.map((budget, index) => {
 				const live = props.status?.budgets.find(
-					item => item.apiKeyName === props.apiKeyName && item.name === budget.name
+					item => item.apiKeyId === props.apiKeyId && item.name === budget.name
 				);
 				const { used, fraction, level } = budgetProgress(budget, live);
 				return (

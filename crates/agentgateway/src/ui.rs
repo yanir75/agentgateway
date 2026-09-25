@@ -938,7 +938,7 @@ async fn cost_models(
 #[derive(serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct BudgetStatusQuery {
-	api_key_name: Option<String>,
+	api_key_id: Option<String>,
 }
 
 async fn budget_status(
@@ -949,7 +949,7 @@ async fn budget_status(
 		app
 			.state
 			.budget_policy
-			.status(query.api_key_name.as_deref())?,
+			.status(query.api_key_id.as_deref())?,
 	))
 }
 

@@ -449,6 +449,7 @@ pub struct LocalAPIKeys {
 	pub location: AuthorizationLocation,
 
 	/// Budgets that apply to keys based on metadata fields. These budgets are independent of any budgets attached to individual keys.
+    #[serde(skip_serializing_if = "Option::is_none")]
 	pub budgets: Option<Budgets>,
 }
 
@@ -479,7 +480,7 @@ pub enum LocalAPIKey {
 }
 
 impl LocalAPIKey {
-	fn into_parts(self,budgets: &Budgets) -> anyhow::Result<(APIKeyHash, APIKeyPolicy)> {
+	fn into_parts(self, budgets: &Budgets) -> anyhow::Result<(APIKeyHash, APIKeyPolicy)> {
 		let (key_hash, metadata, allowed_models) = match self {
 			LocalAPIKey::Key {
 				key,
@@ -493,17 +494,16 @@ impl LocalAPIKey {
 			} => (key_hash, metadata, allowed_models),
 		};
 		let metadata = metadata.unwrap_or_default();
-		let api_key = metadata
-			.get("name")
-			.and_then(serde_json::Value::as_str)
-			.filter(|name| !name.is_empty())
-			.map(str::to_owned);
-		
-		let matched_budgets = budgets.resolve_budgets(key_hash.as_str(), &metadata);
-		if !matched_budgets.budgets.is_empty() && api_key.is_none() {
-			anyhow::bail!("API keys with budgets must have a metadata.name");
-		}
-		
+		// let api_key = metadata
+		// 	.get("name")
+		// 	.and_then(serde_json::Value::as_str)
+		// 	.filter(|name| !name.is_empty())
+		// 	.map(str::to_owned);
+
+		let matched_budgets = budgets.resolve(key_hash.as_str(), &metadata);
+		// if !matched_budgets.budgets.is_empty() && api_key.is_none() {
+		// 	anyhow::bail!("API keys with budgets must have a metadata.name");
+		// }
 
 		Ok((
 			key_hash,
