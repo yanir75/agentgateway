@@ -164,7 +164,7 @@ pub struct Budget {
 	pub window: BudgetWindow,
 	/// Action taken when the budget is exceeded.
 	pub on_budget_exceeded: BudgetExceededAction,
-	/// Optional scope for this budget.
+	/// Scope for this budget.
 	pub scope: BudgetScope,
 }
 
