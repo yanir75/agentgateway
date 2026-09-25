@@ -73,11 +73,11 @@ export function KeysPage() {
 	const upsertResource = useUpsertConfigResource();
 	const upsertPolicy = useUpsertPolicyResource();
 	const deleteResource = useDeleteConfigResource();
-	const budgetStatus = useBudgetStatus({
-		enabled: keys.some(key => key.budgets?.length)
-	});
 	const help = useSchemaHelp();
 	const policy = (policies.apiKey ?? null) as LlmApiKeyPolicy | null;
+	const budgetStatus = useBudgetStatus({
+		enabled: Boolean(policy?.budgets?.length)
+	});
 	const filePolicyOwned = Boolean(
 		rawConfig.data?.llm?.policies && Object.hasOwn(rawConfig.data.llm.policies, 'apiKey')
 	);
@@ -111,7 +111,29 @@ export function KeysPage() {
 		return hybrid && id && isDatabaseConfigResource(resources, 'llm.apiKey', id) ? id : undefined;
 	}
 
-	function saveKey(key: VirtualApiKey, previousKey?: string) {
+	function saveBudgets(apiKeyId: string, budgets: VirtualApiKeyBudget[], onSettled: () => void) {
+		const current = policy?.budgets ?? [];
+		const next = apiKeyId
+			? [
+					...current.filter(budget => budgetScopeKey(budget) !== apiKeyId),
+					...budgets.map(budget => scopedBudget(budget, apiKeyId))
+				]
+			: current;
+		if (!policy || JSON.stringify(next) === JSON.stringify(current)) {
+			onSettled();
+			return;
+		}
+		upsertPolicy.mutate(
+			{
+				kind: 'llm.policy',
+				id: 'apiKey',
+				value: { ...apiKeyPolicyResourceValue(policy), budgets: next }
+			},
+			{ onSuccess: onSettled }
+		);
+	}
+
+	function saveKey(key: VirtualApiKey, budgets: VirtualApiKeyBudget[], previousKey?: string) {
 		const previous = previousKey ? keys.find(item => keyValue(item) === previousKey) : undefined;
 		const previousIndex = previous ? keys.indexOf(previous) : -1;
 		const previousId = previous ? keyId(previous) || `@index:${previousIndex}` : undefined;
@@ -119,7 +141,19 @@ export function KeysPage() {
 		if (value.metadata && typeof value.metadata === 'object') {
 			value.metadata = withoutServerMetadata(metadataObject(value.metadata));
 		}
-		upsertResource.mutate({ kind: 'llm.apiKey', value, previousId }, { onSuccess: closeKeyDrawer });
+		upsertResource.mutate(
+			{ kind: 'llm.apiKey', value, previousId },
+			{
+				onSuccess: response => {
+					const savedId = response?.resources?.[0]?.id ?? '';
+					saveBudgets(
+						savedId.startsWith('@index:') ? keyId(key) : savedId || keyId(key),
+						budgets,
+						closeKeyDrawer
+					);
+				}
+			}
+		);
 	}
 
 	function removeKey(key: VirtualApiKey) {
@@ -129,7 +163,7 @@ export function KeysPage() {
 		deleteResource.mutate(
 			{ kind: 'llm.apiKey', id },
 			{
-				onSuccess: () => setDeleteKey(null)
+				onSuccess: () => saveBudgets(keyId(key), [], () => setDeleteKey(null))
 			}
 		);
 	}
@@ -297,7 +331,7 @@ export function KeysPage() {
 										<td>
 											<BudgetSummary
 												apiKeyId={keyId(item)}
-												value={item.budgets}
+												value={keyBudgets(policy, keyId(item))}
 												status={budgetStatus.data}
 											/>
 										</td>
@@ -346,6 +380,8 @@ export function KeysPage() {
 				<KeyEditor
 					key={activeEditing.previousKey ?? 'new'}
 					initial={activeEditing.key}
+					budgets={keyBudgets(policy, keyId(activeEditing.key))}
+					budgetsReadOnly={policyReadOnly}
 					config={config.data}
 					previousKey={activeEditing.previousKey}
 					help={help}
@@ -469,7 +505,8 @@ function PolicyControls(props: {
 	const [location, setLocation] = useState(() => authorizationLocationFrom(props.policy?.location));
 	const patch: Partial<LlmApiKeyPolicy> = {
 		mode,
-		location: authorizationLocationToValue(location)
+		location: authorizationLocationToValue(location),
+		...(props.policy?.budgets?.length ? { budgets: props.policy.budgets } : {})
 	};
 	return (
 		<div className="policy-controls api-key-policy-controls">
@@ -562,6 +599,8 @@ function apiKeyPolicyResourceValue(policy: LlmApiKeyPolicy) {
 
 function KeyEditor(props: {
 	initial: VirtualApiKey;
+	budgets: VirtualApiKeyBudget[];
+	budgetsReadOnly?: boolean;
 	config?: GatewayConfig | null;
 	previousKey?: string;
 	help: SchemaHelp;
@@ -570,7 +609,7 @@ function KeyEditor(props: {
 	saving: boolean;
 	saveError?: string | null;
 	onCancel: () => void;
-	onSave: (key: VirtualApiKey, previousKey?: string) => void;
+	onSave: (key: VirtualApiKey, budgets: VirtualApiKeyBudget[], previousKey?: string) => void;
 }) {
 	const isNew = !props.previousKey;
 	const initialMetadata = metadataObject(props.initial.metadata);
@@ -591,7 +630,7 @@ function KeyEditor(props: {
 	);
 	const [allowedModels, setAllowedModels] = useState(initialAllowedModels ?? []);
 	const [budgets, setBudgets] = useState<VirtualApiKeyBudget[]>(() =>
-		structuredClone(props.initial.budgets ?? [])
+		structuredClone(props.budgets)
 	);
 	const [submitted, setSubmitted] = useState(false);
 	const generatedKey = useRef<string | null>(null);
@@ -657,8 +696,6 @@ function KeyEditor(props: {
 			isNew || replaceKey ? { key: nextKey, metadata } : { ...props.initial, metadata };
 		if (modelAccess === 'unrestricted') delete value.allowedModels;
 		else value.allowedModels = modelAccess === 'deny' ? [] : allowedModels;
-		if (budgets.length) value.budgets = budgets;
-		else delete value.budgets;
 		return value;
 	}
 
@@ -670,7 +707,7 @@ function KeyEditor(props: {
 	function save() {
 		const virtualKey = nextVirtualKey();
 		if (!virtualKey) return;
-		props.onSave(virtualKey, props.previousKey);
+		props.onSave(virtualKey, budgets, props.previousKey);
 	}
 
 	return (
@@ -703,6 +740,7 @@ function KeyEditor(props: {
 						const virtualKey = nextVirtualKey();
 						if (virtualKey) {
 							upsertVirtualKey(next, virtualKey, props.previousKey);
+							applyKeyBudgets(getApiKeyPolicy(next), keyId(props.initial), budgets);
 						}
 					}}
 				/>
@@ -794,6 +832,11 @@ function KeyEditor(props: {
 				{!props.config?.config?.database ? (
 					<StatusBanner state="warn" title="Database required">
 						API key budgets require <code>config.database</code> to be configured.
+					</StatusBanner>
+				) : null}
+				{props.budgetsReadOnly ? (
+					<StatusBanner state="warn" title="Budgets are file-owned">
+						{fileOwnedPolicyMessage} Budget changes made here cannot be saved.
 					</StatusBanner>
 				) : null}
 				<BudgetEditor budgets={budgets} apiKeyId={keyId(props.initial)} onChange={setBudgets} />
@@ -1149,6 +1192,33 @@ function duplicateKeyName(name: string, keys: VirtualApiKey[]) {
 
 function normalizeKeyName(name: string) {
 	return name.trim().toLowerCase();
+}
+
+function budgetScopeKey(budget: VirtualApiKeyBudget) {
+	return 'key' in budget.scope ? budget.scope.key : null;
+}
+
+function scopedBudget(budget: VirtualApiKeyBudget, apiKeyId: string): VirtualApiKeyBudget {
+	return { ...budget, scope: { key: apiKeyId } };
+}
+
+function keyBudgets(policy: LlmApiKeyPolicy | null, apiKeyId: string) {
+	if (!apiKeyId) return [];
+	return (policy?.budgets ?? []).filter(budget => budgetScopeKey(budget) === apiKeyId);
+}
+
+function applyKeyBudgets(
+	policy: LlmApiKeyPolicy,
+	apiKeyId: string,
+	budgets: VirtualApiKeyBudget[]
+) {
+	if (!apiKeyId) return;
+	const next = [
+		...(policy.budgets ?? []).filter(budget => budgetScopeKey(budget) !== apiKeyId),
+		...budgets.map(budget => scopedBudget(budget, apiKeyId))
+	];
+	if (next.length) policy.budgets = next;
+	else delete policy.budgets;
 }
 
 function keyId(key: VirtualApiKey) {

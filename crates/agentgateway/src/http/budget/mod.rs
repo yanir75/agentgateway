@@ -253,7 +253,7 @@ impl Budget {
 						values.keys().map(String::as_str).join("."),
 						values.values().map(String::as_str).join(".")
 					),
-					ResolvedBudgetScope::GroupBy { values: values },
+					ResolvedBudgetScope::GroupBy { values },
 				))
 			},
 			BudgetScope::Selector(selector) => {
@@ -268,14 +268,10 @@ impl Budget {
 		}
 	}
 
-	pub fn resolve(
-		&self,
-		api_key: &str,
-		metadata: &serde_json::Value,
-	) -> Option<MatchedBudget> {
-		let (id, resolved_scope) = self.resolve_scope(api_key, &metadata)?;
+	pub fn resolve(&self, api_key: &str, metadata: &serde_json::Value) -> Option<MatchedBudget> {
+		let (id, resolved_scope) = self.resolve_scope(api_key, metadata)?;
 		Some(MatchedBudget {
-			id: id,
+			id,
 			scope: resolved_scope,
 			budget: self.clone(),
 		})
@@ -467,9 +463,17 @@ pub struct BudgetSettlement {
 }
 
 #[derive(Debug, thiserror::Error)]
-#[error("Budget exceeded")]
+#[error("Budget `{name}` exceeded")]
 pub struct BudgetExceeded {
 	pub retry_after: u64,
+	/// Name of the budget that blocked the request.
+	pub name: String,
+	/// Unit the exceeded budget is measured in.
+	pub limit_unit: &'static str,
+	pub limit_amount: Decimal,
+	pub used: Decimal,
+	/// End of the current window, when usage resets.
+	pub reset_at: UnixDate,
 }
 
 /// Returns the half-open fixed window `[start, end)` containing `now`.
@@ -646,6 +650,11 @@ impl BudgetPolicy {
 					retry_after: retry_after
 						.as_secs()
 						.saturating_add(u64::from(retry_after.subsec_nanos() != 0)),
+					name: budget.budget.name.clone(),
+					limit_unit: budget.budget.limit.unit.as_str(),
+					limit_amount: budget.budget.limit.amount.decimal().normalize(),
+					used: used.normalize(),
+					reset_at: window_end,
 				});
 			}
 		}
@@ -738,7 +747,7 @@ mod tests {
 
 	#[test]
 	fn budgets_require_a_database() {
-				let id = hex::encode(crate::crypto::digest::sha256("sk-budget".as_bytes()));
+		let id = hex::encode(crate::crypto::digest::sha256("sk-budget".as_bytes()));
 
 		let keys: crate::http::apikey::LocalAPIKeys = serde_json::from_value(serde_json::json!({
 			"keys": [{
@@ -956,7 +965,7 @@ CREATE TABLE budget_usage (
 			on_budget_exceeded: BudgetExceededAction::Block,
 			scope: Key("key".to_owned()),
 		};
-		let resolved_usd_budget = usd_budget.resolve(&"key".to_owned(), &json!({})).unwrap();
+		let resolved_usd_budget = usd_budget.resolve("key", &json!({})).unwrap();
 		let mut expired_residue = BudgetCounter::configured(
 			&resolved_usd_budget.id,
 			&resolved_usd_budget.scope,

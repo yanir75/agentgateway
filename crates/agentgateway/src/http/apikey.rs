@@ -500,7 +500,8 @@ impl LocalAPIKey {
 		// 	.filter(|name| !name.is_empty())
 		// 	.map(str::to_owned);
 
-		let matched_budgets = Some(budgets.resolve(key_hash.as_str(), &metadata)).filter(|b|!b.budgets.is_empty());
+		let matched_budgets =
+			Some(budgets.resolve(key_hash.as_str(), &metadata)).filter(|b| !b.budgets.is_empty());
 		// if !matched_budgets.budgets.is_empty() && api_key.is_none() {
 		// 	anyhow::bail!("API keys with budgets must have a metadata.name");
 		// }

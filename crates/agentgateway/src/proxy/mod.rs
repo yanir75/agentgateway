@@ -573,6 +573,9 @@ impl ProxyError {
 							"message": exceeded.to_string(),
 							"type": "rate_limit_error",
 							"code": "budget_exceeded",
+							"budget": exceeded.name,
+							"unit": exceeded.limit_unit,
+							"reset_at": exceeded.reset_at.to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
 						}
 					})
 					.to_string(),
