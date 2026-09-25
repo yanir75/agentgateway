@@ -494,17 +494,9 @@ impl LocalAPIKey {
 			} => (key_hash, metadata, allowed_models),
 		};
 		let metadata = metadata.unwrap_or_default();
-		// let api_key = metadata
-		// 	.get("name")
-		// 	.and_then(serde_json::Value::as_str)
-		// 	.filter(|name| !name.is_empty())
-		// 	.map(str::to_owned);
 
 		let matched_budgets =
 			Some(budgets.resolve(key_hash.as_str(), &metadata)).filter(|b| !b.budgets.is_empty());
-		// if !matched_budgets.budgets.is_empty() && api_key.is_none() {
-		// 	anyhow::bail!("API keys with budgets must have a metadata.name");
-		// }
 
 		Ok((
 			key_hash,
