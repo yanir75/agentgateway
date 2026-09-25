@@ -448,7 +448,7 @@ pub struct LocalAPIKeys {
 	#[serde(default)]
 	pub location: AuthorizationLocation,
 
-	/// Budgets that apply to keys based on metadata fields. These budgets are independent of any budgets attached to individual keys.
+	/// Budgets that apply to keys based on metadata fields. These budgets replace budgets attached to individual keys.
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub budgets: Option<Budgets>,
 }
