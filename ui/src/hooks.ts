@@ -304,10 +304,9 @@ export function useUpsertConfigResource() {
 		mutationFn: async (input: UpsertConfigResourceInput) => {
 			await requireWritableRuntime(queryClient);
 			if (input.previousId) {
-				await updateConfigResource(input.kind, input.previousId, input.value);
-				return;
+				return await updateConfigResource(input.kind, input.previousId, input.value);
 			}
-			await putConfigResources(input.kind, [input.value]);
+			return await putConfigResources(input.kind, [input.value]);
 		},
 		onSuccess: () => invalidateConfigViews(queryClient)
 	});

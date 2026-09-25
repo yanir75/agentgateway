@@ -6737,6 +6737,17 @@
               "prefix": "Bearer "
             }
           }
+        },
+        "budgets": {
+          "description": "Budgets that apply to keys based on metadata fields. These budgets are independent of any budgets attached to individual keys.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Budgets"
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       },
       "additionalProperties": false,
@@ -6766,13 +6777,6 @@
                 "type": "string"
               },
               "default": null
-            },
-            "budgets": {
-              "description": "Independent budgets charged after LLM responses. A request is not charged when its provider\ndoes not report the usage or cost required by the budget unit.",
-              "type": "array",
-              "items": {
-                "$ref": "#/$defs/Budget"
-              }
             }
           },
           "additionalProperties": false,
@@ -6800,13 +6804,6 @@
                 "type": "string"
               },
               "default": null
-            },
-            "budgets": {
-              "description": "Independent budgets charged after LLM responses. A request is not charged when its provider\ndoes not report the usage or cost required by the budget unit.",
-              "type": "array",
-              "items": {
-                "$ref": "#/$defs/Budget"
-              }
             }
           },
           "additionalProperties": false,
@@ -6818,6 +6815,35 @@
     },
     "APIKey": {
       "type": "string"
+    },
+    "APIKeyHash": {
+      "type": "string"
+    },
+    "APIKeyMode": {
+      "description": "Validation mode for API key authentication.",
+      "oneOf": [
+        {
+          "description": "Require a valid API key.",
+          "type": "string",
+          "const": "strict"
+        },
+        {
+          "description": "Validate the API key when present.\nThis is the default option.\nWarning: this allows requests without an API key.",
+          "type": "string",
+          "const": "optional"
+        },
+        {
+          "description": "Decode valid API keys for later policy use.\nWarning: this allows requests with missing or invalid API keys.",
+          "type": "string",
+          "const": "permissive"
+        }
+      ]
+    },
+    "Budgets": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Budget"
+      }
     },
     "Budget": {
       "description": "A named budget attached to a standalone API key.\n\nUsage is charged after an LLM response when the provider reports the tokens or cost required by\nthe configured unit. Requests with unavailable usage are logged but cannot be charged or blocked\nretroactively.",
@@ -6838,6 +6864,10 @@
         "onBudgetExceeded": {
           "description": "Action taken when the budget is exceeded.",
           "$ref": "#/$defs/BudgetExceededAction"
+        },
+        "scope": {
+          "description": "Optional scope for this budget.",
+          "$ref": "#/$defs/BudgetScope"
         }
       },
       "additionalProperties": false,
@@ -6845,7 +6875,8 @@
         "name",
         "limit",
         "window",
-        "onBudgetExceeded"
+        "onBudgetExceeded",
+        "scope"
       ]
     },
     "BudgetLimit": {
@@ -6895,26 +6926,50 @@
         "Block"
       ]
     },
-    "APIKeyHash": {
-      "type": "string"
-    },
-    "APIKeyMode": {
-      "description": "Validation mode for API key authentication.",
+    "BudgetScope": {
       "oneOf": [
         {
-          "description": "Require a valid API key.",
-          "type": "string",
-          "const": "strict"
+          "type": "object",
+          "properties": {
+            "key": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "key"
+          ],
+          "additionalProperties": false
         },
         {
-          "description": "Validate the API key when present.\nThis is the default option.\nWarning: this allows requests without an API key.",
-          "type": "string",
-          "const": "optional"
+          "type": "object",
+          "properties": {
+            "groupBy": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": [
+            "groupBy"
+          ],
+          "additionalProperties": false
         },
         {
-          "description": "Decode valid API keys for later policy use.\nWarning: this allows requests with missing or invalid API keys.",
-          "type": "string",
-          "const": "permissive"
+          "type": "object",
+          "properties": {
+            "selector": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
+          },
+          "required": [
+            "selector"
+          ],
+          "additionalProperties": false
         }
       ]
     },

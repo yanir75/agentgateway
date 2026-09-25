@@ -62,34 +62,40 @@ async fn llm_openai_tokenize() {
 
 #[tokio::test]
 async fn llm_token_budget_persists_and_blocks_requests() {
+	use agentgateway::crypto;
 	let pool =
 		agentgateway::database::DatabasePool::connect_with_max_connections("sqlite::memory:", Some(1))
 			.await
 			.unwrap();
+	let fn_sha256 = |s: String| hex::encode(crypto::digest::sha256(s.as_bytes()));
 	let policy = json!({
 		"apiKey": {
 			"keys": [
 				{
 					"key": "sk-budget",
 					"metadata": {"name": "budgeted-key"},
-					"budgets": [{
-						"name": "tokens",
-						"limit": {"unit": "Tokens", "amount": 40},
-						"window": {"rolling": "1h"},
-						"onBudgetExceeded": "Block"
-					}]
 				},
 				{
 					"key": "sk-other-budget",
-					"metadata": {"name": "budgeted-key"},
+					"metadata": {"name": "budgeted-key"}
+				}
+			],
 					"budgets": [{
 						"name": "tokens",
 						"limit": {"unit": "Tokens", "amount": 40},
 						"window": {"rolling": "1h"},
-						"onBudgetExceeded": "Block"
-					}]
-				}
-			],
+						"onBudgetExceeded": "Block",
+						"scope": {"key":fn_sha256("sk-budget".to_owned())}
+
+					},
+					{
+						"name": "tokens-other",
+						"limit": {"unit": "Tokens", "amount": 40},
+						"window": {"rolling": "1h"},
+						"onBudgetExceeded": "Block",
+						"scope": {"key":fn_sha256("sk-other-budget".to_owned())}
+
+					}],
 			"mode": "strict"
 		}
 	});

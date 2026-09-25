@@ -11,6 +11,7 @@ use tokio::sync::watch;
 use tracing::{error, warn};
 
 use crate::database::DatabasePool;
+use crate::http::apikey::APIKeyHash;
 use crate::telemetry::log_store;
 
 #[derive(Clone, Debug)]
@@ -1338,7 +1339,7 @@ pub(crate) fn prepare_resource(
 	let id = match kind {
 		ConfigResourceKind::LlmApiKey => {
 			validate_api_key_metadata(&value)?;
-			let id = uuid::Uuid::new_v4().to_string();
+			let id = api_key_resource_id(&value)?;
 			set_api_key_managed_metadata(&mut value, id.clone(), Some(Utc::now().timestamp()))?;
 			id
 		},
@@ -1411,6 +1412,24 @@ fn validate_api_key_metadata(value: &Value) -> anyhow::Result<()> {
 		);
 	}
 	Ok(())
+}
+
+fn api_key_resource_id(value: &Value) -> anyhow::Result<String> {
+	if let Some(key) = value.get("key").and_then(Value::as_str) {
+		return Ok(APIKeyHash::from_raw_key(key).as_str().to_string());
+	}
+	let Some(key_hash) = value.get("keyHash").and_then(Value::as_str) else {
+		return Err(
+			ConfigResourceError::InvalidRequest(
+				"llm.apiKey resources require value.key or value.keyHash".to_string(),
+			)
+			.into(),
+		);
+	};
+	match APIKeyHash::parse(key_hash) {
+		Ok(hash) => Ok(hash.as_str().to_string()),
+		Err(err) => Err(ConfigResourceError::InvalidRequest(format!("llm.apiKey {err}")).into()),
+	}
 }
 
 fn set_api_key_managed_metadata(
@@ -1981,10 +2000,32 @@ mod tests {
 
 		let created = prepare_resource(
 			ConfigResourceKind::LlmApiKey,
-			json!({"metadata": {"name": "ci"}}),
+			json!({"key": "agw_sk_ci", "metadata": {"name": "ci"}}),
 		)
 		.expect("api key id");
-		uuid::Uuid::parse_str(&created.id).expect("UUID v4");
+		assert_eq!(
+			created.id,
+			hex::encode(crate::crypto::digest::sha256("agw_sk_ci".as_bytes())),
+			"API keys are identified by their key hash"
+		);
+		assert_eq!(
+			prepare_resource(
+				ConfigResourceKind::LlmApiKey,
+				json!({"keyHash": format!("sha256:{}", created.id), "metadata": {"name": "ci"}}),
+			)
+			.expect("api key id")
+			.id,
+			created.id,
+			"a pre-hashed key resolves to the same identity"
+		);
+		assert!(
+			prepare_resource(
+				ConfigResourceKind::LlmApiKey,
+				json!({"metadata": {"name": "ci"}}),
+			)
+			.is_err(),
+			"API keys without key material have no identity"
+		);
 		assert_eq!(
 			created
 				.value
