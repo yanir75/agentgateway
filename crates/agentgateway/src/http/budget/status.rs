@@ -17,7 +17,7 @@ pub struct BudgetStatusResponse {
 pub struct BudgetStatus {
 	pub id: String,
 	#[serde(skip_serializing_if = "Option::is_none")]
-	pub api_key_id: Option<String>,
+	pub api_key_hash: Option<String>,
 	pub name: String,
 	pub limit: BudgetStatusLimit,
 	pub usage: BudgetStatusUsage,
@@ -53,7 +53,7 @@ pub struct BudgetStatusWindow {
 impl BudgetPolicy {
 	/// Returns a point-in-time status snapshot, optionally filtered by API key display name.
 	/// Expired counters are reported with zero usage even if no request has advanced their window.
-	pub fn status(&self, api_key_id: Option<&str>) -> anyhow::Result<BudgetStatusResponse> {
+	pub fn status(&self, api_key_hash: Option<&str>) -> anyhow::Result<BudgetStatusResponse> {
 		let observed_at = Utc::now();
 		let mut budgets = self
 			.counters
@@ -61,10 +61,10 @@ impl BudgetPolicy {
 			.filter_map(|counter| {
 				let definition = counter.definition.as_ref()?;
 				let scope_key = match &definition.scope {
-					ResolvedBudgetScope::Key { api_key_id } => Some(api_key_id.as_str()),
+					ResolvedBudgetScope::Key { api_key_hash } => Some(api_key_hash.as_str()),
 					_ => None,
 				};
-				if api_key_id.is_some_and(|filter| scope_key.is_some_and(|key| key != filter)) {
+				if api_key_hash.is_some_and(|filter| scope_key.is_some_and(|key| key != filter)) {
 					return None;
 				}
 				let limit = definition.budget.limit.amount.decimal();
@@ -77,7 +77,7 @@ impl BudgetPolicy {
 				let remaining = (limit - used).max(Decimal::ZERO);
 				Some(BudgetStatus {
 					id: definition.id.clone(),
-					api_key_id: scope_key.map(str::to_owned),
+					api_key_hash: scope_key.map(str::to_owned),
 					name: definition.budget.name.clone(),
 					limit: BudgetStatusLimit {
 						unit: definition.budget.limit.unit.as_str().to_owned(),

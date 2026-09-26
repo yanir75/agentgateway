@@ -144,7 +144,7 @@ pub enum BudgetScope {
 
 #[derive(Debug, Clone)]
 pub enum ResolvedBudgetScope {
-	Key { api_key_id: String },
+	Key { api_key_hash: String },
 	GroupBy { values: BTreeMap<String, String> },
 	Selector,
 }
@@ -224,16 +224,16 @@ impl Budget {
 
 	pub fn resolve_scope(
 		&self,
-		api_key_id: &str,
+		api_key_hash: &str,
 		metadata: &serde_json::Value,
 	) -> Option<(String, ResolvedBudgetScope)> {
 		match &self.scope {
-			BudgetScope::Key(id) => {
-				if id == api_key_id {
+			BudgetScope::Key(hash) => {
+				if hash == api_key_hash {
 					Some((
-						format!("api-key:{}:budget:{}", id, self.name),
+						format!("api-key:{}:budget:{}", hash, self.name),
 						ResolvedBudgetScope::Key {
-							api_key_id: id.to_owned(),
+							api_key_hash: hash.to_owned(),
 						},
 					))
 				} else {
@@ -268,8 +268,8 @@ impl Budget {
 		}
 	}
 
-	pub fn resolve(&self, api_key: &str, metadata: &serde_json::Value) -> Option<MatchedBudget> {
-		let (id, resolved_scope) = self.resolve_scope(api_key, metadata)?;
+	pub fn resolve(&self, api_key_hash: &str, metadata: &serde_json::Value) -> Option<MatchedBudget> {
+		let (id, resolved_scope) = self.resolve_scope(api_key_hash, metadata)?;
 		Some(MatchedBudget {
 			id,
 			scope: resolved_scope,
@@ -283,6 +283,11 @@ impl Budget {
 pub struct Budgets(Vec<Budget>);
 
 impl Budgets {
+
+	pub fn is_empty(&self) -> bool {
+		self.0.is_empty()
+	}
+
 	pub fn validate(&self) -> anyhow::Result<()> {
 		let mut names = std::collections::HashSet::new();
 		for budget in self.0.iter() {
@@ -296,11 +301,11 @@ impl Budgets {
 		Ok(())
 	}
 
-	pub fn resolve(&self, api_key: &str, metadata: &serde_json::Value) -> MatchedBudgets {
+	pub fn resolve(&self, api_key_hash: &str, metadata: &serde_json::Value) -> MatchedBudgets {
 		let matched_budgets = self
 			.0
 			.iter()
-			.filter_map(|budget| budget.resolve(api_key, metadata))
+			.filter_map(|budget| budget.resolve(api_key_hash, metadata))
 			.collect();
 		MatchedBudgets {
 			budgets: matched_budgets,
