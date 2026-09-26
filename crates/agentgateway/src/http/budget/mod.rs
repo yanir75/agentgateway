@@ -2,6 +2,7 @@ use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::str::FromStr;
 use std::sync::{Arc, OnceLock};
 use std::time::Duration;
+use std::ops::Deref;
 
 use anyhow::Context;
 use chrono::{DurationRound, TimeDelta, Utc};
@@ -281,16 +282,18 @@ impl Budget {
 #[apply(schema_de!)]
 #[derive(Default)]
 pub struct Budgets(Vec<Budget>);
+impl Deref for Budgets {
+    type Target = Vec<Budget>;
+
+    fn deref(&self) -> &Vec<Budget> {
+        &self.0
+    }
+}
 
 impl Budgets {
-
-	pub fn is_empty(&self) -> bool {
-		self.0.is_empty()
-	}
-
 	pub fn validate(&self) -> anyhow::Result<()> {
 		let mut names = std::collections::HashSet::new();
-		for budget in self.0.iter() {
+		for budget in self.iter() {
 			anyhow::ensure!(
 				names.insert(&budget.name),
 				"duplicate budget name {:?}",
@@ -303,13 +306,10 @@ impl Budgets {
 
 	pub fn resolve(&self, api_key_hash: &str, metadata: &serde_json::Value) -> MatchedBudgets {
 		let matched_budgets = self
-			.0
 			.iter()
 			.filter_map(|budget| budget.resolve(api_key_hash, metadata))
 			.collect();
-		MatchedBudgets {
-			budgets: matched_budgets,
-		}
+		MatchedBudgets(matched_budgets)
 	}
 }
 
@@ -435,8 +435,14 @@ pub struct MatchedBudget {
 }
 
 #[derive(Debug, Clone)]
-pub struct MatchedBudgets {
-	pub(crate) budgets: Vec<MatchedBudget>,
+pub struct MatchedBudgets(Vec<MatchedBudget>);
+
+impl Deref for MatchedBudgets {
+    type Target = Vec<MatchedBudget>;
+
+    fn deref(&self) -> &Vec<MatchedBudget> {
+        &self.0
+    }
 }
 
 #[derive(Debug, Clone, Default, serde::Serialize)]
@@ -571,7 +577,7 @@ impl BudgetPolicy {
 			let Some(budgets) = policy.budgets.as_ref() else {
 				continue;
 			};
-			for budget in &budgets.budgets {
+			for budget in budgets.iter() {//&**budgets {
 				if let Some(registration) = &self.registration {
 					BudgetCounter::configured(&budget.id, &budget.scope, &budget.budget, now)?;
 					registration.insert(
@@ -609,7 +615,7 @@ impl BudgetPolicy {
 	fn check(&self, budgets: &MatchedBudgets) -> anyhow::Result<Option<BudgetExceeded>> {
 		let now = Utc::now();
 		let mut blocked = None;
-		for budget in &budgets.budgets {
+		for budget in budgets.iter() {
 			let (used, window_end) = {
 				let mut counter = self
 					.counters
@@ -670,7 +676,7 @@ impl BudgetPolicy {
 	/// delta. A counter is advanced first if the request crossed a window boundary.
 	fn settle(&self, budgets: &MatchedBudgets, response: &LLMContext) {
 		let now = Utc::now();
-		for budget in &budgets.budgets {
+		for budget in budgets.iter() {
 			let charged = match budget.budget.limit.unit {
 				BudgetLimitUnit::Usd => response.cost.as_ref().map(|cost| cost.total()),
 				BudgetLimitUnit::Tokens => response.total_tokens.map(Decimal::from),

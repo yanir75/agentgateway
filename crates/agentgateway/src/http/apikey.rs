@@ -496,7 +496,7 @@ impl LocalAPIKey {
 		let metadata = metadata.unwrap_or_default();
 
 		let matched_budgets =
-			Some(budgets.resolve(key_hash.as_str(), &metadata)).filter(|b| !b.budgets.is_empty());
+			Some(budgets.resolve(key_hash.as_str(), &metadata)).filter(|b| !b.is_empty());
 
 		Ok((
 			key_hash,
