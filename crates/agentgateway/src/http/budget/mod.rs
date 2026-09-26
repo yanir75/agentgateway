@@ -1,8 +1,8 @@
 use std::collections::{BTreeMap, BTreeSet, HashMap};
+use std::ops::Deref;
 use std::str::FromStr;
 use std::sync::{Arc, OnceLock};
 use std::time::Duration;
-use std::ops::Deref;
 
 use anyhow::Context;
 use chrono::{DurationRound, TimeDelta, Utc};
@@ -283,11 +283,11 @@ impl Budget {
 #[derive(Default)]
 pub struct Budgets(Vec<Budget>);
 impl Deref for Budgets {
-    type Target = Vec<Budget>;
+	type Target = Vec<Budget>;
 
-    fn deref(&self) -> &Vec<Budget> {
-        &self.0
-    }
+	fn deref(&self) -> &Vec<Budget> {
+		&self.0
+	}
 }
 
 impl Budgets {
@@ -438,11 +438,11 @@ pub struct MatchedBudget {
 pub struct MatchedBudgets(Vec<MatchedBudget>);
 
 impl Deref for MatchedBudgets {
-    type Target = Vec<MatchedBudget>;
+	type Target = Vec<MatchedBudget>;
 
-    fn deref(&self) -> &Vec<MatchedBudget> {
-        &self.0
-    }
+	fn deref(&self) -> &Vec<MatchedBudget> {
+		&self.0
+	}
 }
 
 #[derive(Debug, Clone, Default, serde::Serialize)]
@@ -577,7 +577,8 @@ impl BudgetPolicy {
 			let Some(budgets) = policy.budgets.as_ref() else {
 				continue;
 			};
-			for budget in budgets.iter() {//&**budgets {
+			for budget in budgets.iter() {
+				//&**budgets {
 				if let Some(registration) = &self.registration {
 					BudgetCounter::configured(&budget.id, &budget.scope, &budget.budget, now)?;
 					registration.insert(
