@@ -1,7 +1,7 @@
 import { requestJson } from '@/api/base';
 
 export interface BudgetStatus {
-	apiKeyName: string;
+	apiKeyHash?: string;
 	name: string;
 	limit: {
 		unit: 'USD' | 'Tokens';
