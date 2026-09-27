@@ -230,7 +230,7 @@ impl Budget {
 	) -> Option<(String, ResolvedBudgetScope)> {
 		match &self.scope {
 			BudgetScope::Key(hash) => {
-				if hash == api_key_hash {
+				if hash.strip_prefix("sha256:").unwrap_or(hash) == api_key_hash {
 					Some((
 						format!("api-key:{}:budget:{}", hash, self.name),
 						ResolvedBudgetScope::Key {

@@ -51,7 +51,7 @@ pub struct BudgetStatusWindow {
 }
 
 impl BudgetPolicy {
-	/// Returns a point-in-time status snapshot, optionally filtered by API key display name.
+	/// Returns a point-in-time status snapshot, optionally filtered by API key hash.
 	/// Expired counters are reported with zero usage even if no request has advanced their window.
 	pub fn status(&self, api_key_hash: Option<&str>) -> anyhow::Result<BudgetStatusResponse> {
 		let observed_at = Utc::now();
