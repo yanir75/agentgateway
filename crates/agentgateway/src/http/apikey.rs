@@ -1,6 +1,7 @@
 use std::hash::Hash;
 
 use ::cel::Value;
+use std::collections::HashSet;
 use secrecy::{ExposeSecret, SecretString};
 use serde::{Deserialize, Deserializer, Serializer};
 use subtle::ConstantTimeEq;
@@ -480,7 +481,7 @@ pub enum LocalAPIKey {
 }
 
 impl LocalAPIKey {
-	fn into_parts(self, budgets: &Budgets) -> anyhow::Result<(APIKeyHash, APIKeyPolicy)> {
+	fn into_parts(self, budgets: &Budgets,names: &mut HashSet<&String>) -> anyhow::Result<(APIKeyHash, APIKeyPolicy)> {
 		let (key_hash, metadata, allowed_models) = match self {
 			LocalAPIKey::Key {
 				key,
@@ -495,8 +496,13 @@ impl LocalAPIKey {
 		};
 		let metadata = metadata.unwrap_or_default();
 
-		let matched_budgets =
-			Some(budgets.resolve(key_hash.as_str(), &metadata)).filter(|b| !b.is_empty());
+		let matched_budgets = budgets.resolve(key_hash.as_str(), &metadata);
+
+		if let Some(budgets) = &matched_budgets {
+			for mb in budgets.iter() {
+				names.remove(&mb.budget.name);
+			}
+		}
 
 		Ok((
 			key_hash,
@@ -512,19 +518,30 @@ impl LocalAPIKey {
 impl LocalAPIKeys {
 	pub fn compile(self) -> anyhow::Result<APIKeyAuthentication> {
 		let budgets = self.budgets.unwrap_or_default();
-		budgets.validate()?;
-
-		Ok(APIKeyAuthentication {
+		let mut names = budgets.validate()?;
+		
+		let api_key_auth = APIKeyAuthentication {
 			users: Arc::new(
 				self
 					.keys
 					.into_iter()
-					.map(|key| LocalAPIKey::into_parts(key, &budgets))
+					.map(|key| LocalAPIKey::into_parts(key, &budgets,&mut names))
 					.collect::<anyhow::Result<_>>()?,
 			),
 			mode: self.mode,
 			location: self.location,
-		})
+		};
+
+		if !names.is_empty() {
+			tracing::warn!(
+				target: "budgets",
+				warning = "budgets do not apply to any key",
+				"Budgets {:?} do not apply to any key", names,
+			)
+		}
+
+		Ok(api_key_auth)
+		
 	}
 
 	pub fn into(self) -> APIKeyAuthentication {

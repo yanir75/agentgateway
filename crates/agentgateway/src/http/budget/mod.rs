@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, BTreeSet, HashMap};
+use std::collections::{BTreeMap, BTreeSet, HashMap,HashSet};
 use std::ops::Deref;
 use std::str::FromStr;
 use std::sync::{Arc, OnceLock};
@@ -291,8 +291,8 @@ impl Deref for Budgets {
 }
 
 impl Budgets {
-	pub fn validate(&self) -> anyhow::Result<()> {
-		let mut names = std::collections::HashSet::new();
+	pub fn validate(&self) -> anyhow::Result<HashSet<&String>> {
+		let mut names = HashSet::new();
 		for budget in self.iter() {
 			anyhow::ensure!(
 				names.insert(&budget.name),
@@ -301,15 +301,17 @@ impl Budgets {
 			);
 			budget.validate()?;
 		}
-		Ok(())
+		Ok(names)
 	}
 
-	pub fn resolve(&self, api_key_hash: &str, metadata: &serde_json::Value) -> MatchedBudgets {
+	pub fn resolve(&self, api_key_hash: &str, metadata: &serde_json::Value) -> Option<MatchedBudgets> {
 		let matched_budgets = self
 			.iter()
 			.filter_map(|budget| budget.resolve(api_key_hash, metadata))
 			.collect();
-		MatchedBudgets(matched_budgets)
+		
+		Some(MatchedBudgets(matched_budgets)).filter(|b| !b.is_empty())
+		
 	}
 }
 
@@ -430,7 +432,7 @@ impl BudgetExceededAction {
 #[derive(Debug, Clone)]
 pub struct MatchedBudget {
 	scope: ResolvedBudgetScope,
-	budget: Budget,
+	pub(crate) budget: Budget,
 	id: String,
 }
 
