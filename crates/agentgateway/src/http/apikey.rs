@@ -1,7 +1,7 @@
+use std::collections::HashSet;
 use std::hash::Hash;
 
 use ::cel::Value;
-use std::collections::HashSet;
 use secrecy::{ExposeSecret, SecretString};
 use serde::{Deserialize, Deserializer, Serializer};
 use subtle::ConstantTimeEq;
@@ -481,7 +481,11 @@ pub enum LocalAPIKey {
 }
 
 impl LocalAPIKey {
-	fn into_parts(self, budgets: &Budgets,names: &mut HashSet<&String>) -> anyhow::Result<(APIKeyHash, APIKeyPolicy)> {
+	fn into_parts(
+		self,
+		budgets: &Budgets,
+		names: &mut HashSet<&String>,
+	) -> anyhow::Result<(APIKeyHash, APIKeyPolicy)> {
 		let (key_hash, metadata, allowed_models) = match self {
 			LocalAPIKey::Key {
 				key,
@@ -519,13 +523,13 @@ impl LocalAPIKeys {
 	pub fn compile(self) -> anyhow::Result<APIKeyAuthentication> {
 		let budgets = self.budgets.unwrap_or_default();
 		let mut names = budgets.validate()?;
-		
+
 		let api_key_auth = APIKeyAuthentication {
 			users: Arc::new(
 				self
 					.keys
 					.into_iter()
-					.map(|key| LocalAPIKey::into_parts(key, &budgets,&mut names))
+					.map(|key| LocalAPIKey::into_parts(key, &budgets, &mut names))
 					.collect::<anyhow::Result<_>>()?,
 			),
 			mode: self.mode,
@@ -541,7 +545,6 @@ impl LocalAPIKeys {
 		}
 
 		Ok(api_key_auth)
-		
 	}
 
 	pub fn into(self) -> APIKeyAuthentication {

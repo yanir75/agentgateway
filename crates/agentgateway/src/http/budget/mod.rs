@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, BTreeSet, HashMap,HashSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::ops::Deref;
 use std::str::FromStr;
 use std::sync::{Arc, OnceLock};
@@ -304,14 +304,17 @@ impl Budgets {
 		Ok(names)
 	}
 
-	pub fn resolve(&self, api_key_hash: &str, metadata: &serde_json::Value) -> Option<MatchedBudgets> {
+	pub fn resolve(
+		&self,
+		api_key_hash: &str,
+		metadata: &serde_json::Value,
+	) -> Option<MatchedBudgets> {
 		let matched_budgets = self
 			.iter()
 			.filter_map(|budget| budget.resolve(api_key_hash, metadata))
 			.collect();
-		
+
 		Some(MatchedBudgets(matched_budgets)).filter(|b| !b.is_empty())
-		
 	}
 }
 
